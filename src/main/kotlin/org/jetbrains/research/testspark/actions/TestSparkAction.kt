@@ -28,6 +28,7 @@ import org.jetbrains.research.testspark.settings.evosuite.EvoSuiteSettingsState
 import org.jetbrains.research.testspark.settings.llm.LLMSettingsState
 import org.jetbrains.research.testspark.tools.TestsExecutionResultManager
 import org.jetbrains.research.testspark.tools.evosuite.EvoSuite
+import org.jetbrains.research.testspark.tools.kex.Kex
 import org.jetbrains.research.testspark.tools.llm.Llm
 import org.jetbrains.research.testspark.tools.template.Tool
 import java.awt.BorderLayout
@@ -110,6 +111,7 @@ class TestSparkAction : AnAction() {
 
         private val llmButton = JRadioButton("<html><b>${Llm().name}</b></html>")
         private val evoSuiteButton = JRadioButton("<html><b>${EvoSuite().name}</b></html>")
+        private val kexButton = JRadioButton("<html><b>${Kex().name}</b></html>")
         private val testGeneratorButtonGroup = ButtonGroup()
 
         private val psiHelper: PsiHelper
@@ -203,11 +205,13 @@ class TestSparkAction : AnAction() {
 
             testGeneratorButtonGroup.add(llmButton)
             testGeneratorButtonGroup.add(evoSuiteButton)
+            testGeneratorButtonGroup.add(kexButton)
 
             val testGeneratorPanel = JPanel()
             testGeneratorPanel.add(JLabel("Select the test generator:"))
             testGeneratorPanel.add(llmButton)
             testGeneratorPanel.add(evoSuiteButton)
+            testGeneratorPanel.add(kexButton)
 
             for ((codeType, codeTypeName) in codeTypes) {
                 val button = JRadioButton(codeTypeName)
@@ -267,6 +271,10 @@ class TestSparkAction : AnAction() {
                 updateNextButton()
             }
 
+            kexButton.addActionListener {
+                updateNextButton()
+            }
+
             for ((_, button) in codeTypeButtons) {
                 button.addActionListener {
                     llmSetupPanelFactory.setPromptEditorType(button.text)
@@ -286,6 +294,8 @@ class TestSparkAction : AnAction() {
                     cardLayout.next(panel)
                     cardLayout.next(panel)
                     pack()
+                } else if (kexButton.isSelected) {
+                    startKexGeneration()
                 } else if (evoSuiteButton.isSelected && !evoSuiteSettingsState.evosuiteSetupCheckBoxSelected) {
                     startEvoSuiteGeneration()
                 } else {
@@ -387,6 +397,7 @@ class TestSparkAction : AnAction() {
             dispose()
         }
 
+        private fun startKexGeneration() = startUnitTestGenerationTool(tool = Kex())
         private fun startEvoSuiteGeneration() = startUnitTestGenerationTool(tool = EvoSuite())
         private fun startLLMGeneration() = startUnitTestGenerationTool(tool = Llm())
 
@@ -398,12 +409,13 @@ class TestSparkAction : AnAction() {
          * This method should be called whenever the mentioned above buttons are clicked.
          */
         private fun updateNextButton() {
-            val isTestGeneratorButtonGroupSelected = llmButton.isSelected || evoSuiteButton.isSelected
+            val isTestGeneratorButtonGroupSelected = llmButton.isSelected || evoSuiteButton.isSelected || kexButton.isSelected
             val isCodeTypeButtonGroupSelected = codeTypeButtons.any { it.second.isSelected }
             nextButton.isEnabled = isTestGeneratorButtonGroupSelected && isCodeTypeButtonGroupSelected
 
             if ((llmButton.isSelected && !llmSettingsState.llmSetupCheckBoxSelected && !llmSettingsState.provideTestSamplesCheckBoxSelected) ||
-                (evoSuiteButton.isSelected && !evoSuiteSettingsState.evosuiteSetupCheckBoxSelected)
+                (evoSuiteButton.isSelected && !evoSuiteSettingsState.evosuiteSetupCheckBoxSelected) ||
+                kexButton.isSelected
             ) {
                 nextButton.text = PluginLabelsBundle.get("ok")
             } else {

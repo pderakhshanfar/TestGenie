@@ -3,6 +3,7 @@
 .qodana/
 build/
 lib/evosuite-*.jar
+lib/kex-runner-*.jar
 lib/JUnitRunner.jar
 **/evosuite-tests/
 *.DS_Store

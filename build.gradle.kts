@@ -263,6 +263,7 @@ tasks {
 
     compileKotlin {
         dependsOn("updateEvosuite")
+        dependsOn("updateKex")
         dependsOn("copyJUnitRunnerLib")
         dependsOn(":core:compileKotlin")
     }
@@ -394,6 +395,58 @@ abstract class UpdateEvoSuite : DefaultTask() {
 
 tasks.register<UpdateEvoSuite>("updateEvosuite") {
     evoSuiteVersion = properties("evosuiteVersion")
+}
+
+//TODO extract commonolatities with updateEvoSuite
+abstract class UpdateKex : DefaultTask() {
+    @Input
+    var kexVersion: String = ""
+
+    @TaskAction
+    fun execute() {
+        val libDir = File("lib")
+        if (!libDir.exists()) {
+            libDir.mkdirs()
+        }
+
+        val jarName = "kex-runner-$kexVersion-jar-with-dependencies.jar"
+
+        if (libDir.listFiles()?.any { it.name.matches(Regex(jarName)) } == true) {
+            logger.info("Specified kex jar found, skipping update")
+            return
+        }
+
+        logger.info("Specified kex jar not found, downloading release $jarName")
+        val downloadUrl =
+            "https://github.com/vorpal-research/kex/releases/download/$kexVersion/kex-$kexVersion.zip"
+        val stream =
+            try {
+                URL(downloadUrl).openStream()
+            } catch (e: Exception) {
+                logger.error("Error fetching latest kex custom release - $e")
+                return
+            }
+
+        ZipInputStream(stream).use { zipInputStream ->
+            while (zipInputStream.nextEntry != null) {
+                val file = File("lib", jarName)
+                val outputStream = FileOutputStream(file)
+                outputStream.write(zipInputStream.readAllBytes())
+                outputStream.close()
+            }
+        }
+
+        logger.info("Latest kex jar successfully downloaded, cleaning up lib directory")
+        libDir.listFiles()?.filter { !it.name.matches(Regex(jarName)) && it.name.contains("kex") }?.map {
+            if (it.delete()) {
+                logger.info("Deleted outdated release ${it.name}")
+            }
+        }
+    }
+}
+
+tasks.register<UpdateKex>("updateKex") {
+    kexVersion = properties("kexVersion")
 }
 /**
  * Copies the JUnitRunner.jar file to the lib directory of the project.
