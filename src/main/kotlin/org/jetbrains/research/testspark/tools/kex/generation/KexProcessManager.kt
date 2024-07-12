@@ -18,6 +18,7 @@ import org.jetbrains.research.testspark.tools.llm.generation.StandardRequestMana
 import org.jetbrains.research.testspark.tools.template.generation.ProcessManager
 import java.io.*
 import java.net.URL
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 
@@ -35,13 +36,9 @@ class KexProcessManager(
 
     private val kexVersion = KexDefaultsBundle.get("kexVersion")
     private val kexHome = KexDefaultsBundle.get("kexHome")
-    private val pluginsPath = PathManager.getPluginsPath()
 
-    //TODO don't assume kex is present and compiled. download if not?
     private var kexPath =
         "$kexHome${ToolUtils.sep}kex-runner${ToolUtils.sep}target${ToolUtils.sep}kex-runner-$kexVersion-jar-with-dependencies.jar"
-    private val kexPolicy = "$kexHome${ToolUtils.sep}kex.policy"
-    //KexProcessManager::class.java.classLoader.getResource("properties/kex/kex.policy")?.toString()
 
 
     override fun runTestGenerator(
@@ -63,39 +60,6 @@ class KexProcessManager(
             Path(generatedTestsData.resultPath).createDirectories()
 
             //TODO cmd should have cases for codeType, which is just hardcoded to CodeType.CLASS here
-//            val jvmArgs = mutableListOf<String>()
-//
-//            //TODO are the file separators made OS agnostic?
-//            val modulesFile =
-//                KexProcessManager::class.java.classLoader.getResourceAsStream("properties/kex/modules.info")
-//                    ?.let { BufferedReader(InputStreamReader(it)) }
-//            if (modulesFile == null) {
-//                kexErrorManager.errorProcess(
-//                    "testspark bug: modules file used for jvm args of kex doesn't exist",
-//                    project,
-//                    errorMonitor
-//                )
-//            } else {
-//                modulesFile.lines().forEach() { line ->
-//                    jvmArgs.add("--add-opens $line")
-//                }
-//            }
-//            jvmArgs.add("--illegal-access=warn")
-//
-//            val cmd = mutableListOf<String>(
-//                "java", //TODO Use project's java not system java. Add >v8 check
-//                "-Xmx8g", //TODO 8g heapsize in properties bundle
-//                "-Djava.security.manager",
-//                "-Djava.security.policy==$kexPolicy",
-//                "-Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener",
-//            )
-//
-//            cmd.addAll(jvmArgs)
-//            cmd.add("-jar $kexPath")
-//            cmd.add("--classpath $projectClassPath")
-//            cmd.add("--target $classFQN")
-//            cmd.add("--output $resultName")
-//            cmd.add("--mode concolic") //TODO make user option in settings
 
             val cmd = mutableListOf<String>(
                 "python3",
@@ -123,7 +87,7 @@ class KexProcessManager(
                     .redirectError(ProcessBuilder.Redirect.PIPE)
                     .start()
 
-//                proc.waitFor(kexProcessTimeout, TimeUnit.SECONDS)
+                proc.waitFor(kexProcessTimeout, TimeUnit.SECONDS)
                 kexOutStr = proc.inputStream.bufferedReader().readText()
 
 
@@ -134,35 +98,6 @@ class KexProcessManager(
             }
 
             System.err.println("PRINTING from STDERR:\n $kexOutStr")
-
-//            val kexProcess = GeneralCommandLine(cmd)
-//            kexProcess.charset = Charset.forName("UTF-8")
-//            //kexProcess.setWorkDirectory(kexHome) //TODO consider also setting KEX_HOME env
-//            val handler = OSProcessHandler(kexProcess)
-//
-//            handler.addProcessListener(object : ProcessAdapter() {
-//                override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-//                    if (ToolUtils.isProcessStopped(errorMonitor, indicator)) {
-//                        handler.destroyProcess()
-//                        return
-//                    }
-//                    kexErrorManager.addLineToKexOutput(event.text)
-//                }
-//            })
-//
-//            handler.startNotify()
-//
-//            if (ToolUtils.isProcessStopped(errorMonitor, indicator)) return null
-//
-//            if (!kexErrorManager.isProcessCorrect(
-//                    handler,
-//                    project,
-//                    kexProcessTimeout,
-//                    indicator,
-//                    errorMonitor
-//                )
-//            ) return null
-
 
             log.info("Save generated test suite and test cases into the project workspace")
             val report = IJReport()
@@ -199,17 +134,6 @@ class KexProcessManager(
                 projectContext.fileUrlAsString!!,
                 generatedTestsData,
             )
-
-            //from evosuite
-//            ToolUtils.saveData(
-//                project,
-//                IJReport(testGenerationResult),
-//                ToolUtils.getPackageFromTestSuiteCode(testGenerationResult.testSuiteCode),
-//                ToolUtils.getImportsCodeFromTestSuiteCode(testGenerationResult.testSuiteCode, classFQN),
-//                projectContext.fileUrlAsString!!,
-//                generatedTestsData,
-//            )
-
         } catch (e: Exception) {
             // TODO remove hardcoded string
             kexErrorManager.errorProcess(
