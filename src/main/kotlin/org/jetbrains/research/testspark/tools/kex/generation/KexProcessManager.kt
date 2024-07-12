@@ -1,13 +1,8 @@
 package org.jetbrains.research.testspark.tools.kex.generation
 
-import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.execution.process.OSProcessHandler
-import com.intellij.execution.process.ProcessAdapter
-import com.intellij.execution.process.ProcessEvent
 import org.jetbrains.research.testspark.tools.ToolUtils
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Key
 import com.intellij.openapi.application.PathManager
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.core.data.TestCase
@@ -22,8 +17,10 @@ import org.jetbrains.research.testspark.tools.kex.error.KexErrorManager
 import org.jetbrains.research.testspark.tools.llm.generation.StandardRequestManagerFactory
 import org.jetbrains.research.testspark.tools.template.generation.ProcessManager
 import java.io.*
+import java.net.URL
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 
-import java.nio.charset.Charset
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 
@@ -101,15 +98,22 @@ class KexProcessManager(
 //            cmd.add("--mode concolic") //TODO make user option in settings
 
             val cmd = mutableListOf<String>(
-                "python3", "./kex.py",
-                "--classpath", "$projectClassPath/target/classes", // TODO how to reliably get the path to 'root of compiled files'? (only that works)
-                "--target", classFQN,
-                "--output", resultName,
-                "--mode", "concolic"
+                "python3",
+                "./kex.py",
+                "--classpath",
+                "$projectClassPath/target/classes", // TODO how to reliably get the path to 'root of compiled files'? (only that works)
+                "--target",
+                classFQN,
+                "--output",
+                resultName,
+                "--mode",
+                "concolic"
             )
 
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
             log.info("Starting Kex with arguments: $cmdString")
+
+            ensureKexExists()
 
             var kexOutStr: String = ""
             try {
@@ -164,7 +168,11 @@ class KexProcessManager(
             val report = IJReport()
             val imports = mutableSetOf<String>()
 
-            val generatedTestsDir = File("$resultName/tests/${classFQN.substringBeforeLast('.').replace('.', '/')}") //TODO does this include the .java?
+            val generatedTestsDir = File(
+                "$resultName/tests/${
+                    classFQN.substringBeforeLast('.').replace('.', '/')
+                }"
+            ) //TODO does this include the .java?
             if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { //collect all generated tests into a report
                 for ((index, file) in generatedTestsDir.listFiles()!!.withIndex()) {
                     val testCode = file.readText()
@@ -175,7 +183,11 @@ class KexProcessManager(
                     imports.addAll(ToolUtils.getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!))
                 }
             } else {
-                kexErrorManager.errorProcess("Generated tests don't exist. Must have had a problem running Kex", project, errorMonitor)
+                kexErrorManager.errorProcess(
+                    "Generated tests don't exist. Must have had a problem running Kex",
+                    project,
+                    errorMonitor
+                )
             }
 
             ToolUtils.transferToIJTestCases(report)
@@ -216,4 +228,48 @@ class KexProcessManager(
         )
     }
 
+    private fun ensureKexExists() {
+        val kexDir = File(kexHome)
+        if (!kexDir.exists()) {
+            kexDir.mkdirs()
+        }
+
+        val requiredFiles = listOf(
+            "$kexHome/kex.ini",
+            "$kexHome/kex.py",
+            "$kexHome/kex.policy",
+            "$kexHome/runtime-deps/modules.info",
+            kexPath
+        )
+        if (requiredFiles.map { File(it).exists() }.all { it }) {
+            log.info("Specified kex jar found, skipping update")
+            return
+        }
+
+        log.info("Kex executable and helper files not found, downloading Kex")
+        val downloadUrl =
+            "https://github.com/vorpal-research/kex/releases/download/$kexVersion/kex-$kexVersion.zip"
+        val stream =
+            try {
+                URL(downloadUrl).openStream()
+            } catch (e: Exception) {
+                log.error("Error fetching latest kex custom release - $e")
+                return //TODO fail test generation here
+            }
+
+        //TODO this can fail unexpectedly if a file with the same name as a required directory exists
+        // inside the given kexHome path.
+        ZipInputStream(stream).use { zipInputStream ->
+            generateSequence { zipInputStream.nextEntry }
+                .filterNot { it.isDirectory }
+                .forEach { entry ->
+                    val file = File("${kexHome}/${entry.name}")
+                    file.parentFile.mkdirs() // makes any directories required
+                    file.outputStream().use { output ->
+                        zipInputStream.copyTo(output)
+                    }
+                }
+        }
+        log.info("Latest kex project successfully downloaded")
+    }
 }
