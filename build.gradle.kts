@@ -170,6 +170,9 @@ dependencies {
     // https://gitlab.com/mvysny/konsume-xml
     implementation("com.gitlab.mvysny.konsume-xml:konsume-xml:1.0")
 
+    // for merging generated kex tests into a single file
+    implementation("com.github.javaparser:javaparser-core:3.26.1")
+
     // From the jetbrains repository
     testImplementation("com.intellij.remoterobot:remote-robot:0.11.13")
     testImplementation("com.intellij.remoterobot:remote-fixtures:0.11.13")

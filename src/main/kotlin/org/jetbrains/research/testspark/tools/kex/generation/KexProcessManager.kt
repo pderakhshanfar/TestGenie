@@ -1,10 +1,17 @@
 package org.jetbrains.research.testspark.tools.kex.generation
 
+import com.github.javaparser.StaticJavaParser
+import com.github.javaparser.ast.NodeList
+import com.github.javaparser.ast.body.BodyDeclaration
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
+import com.github.javaparser.ast.body.FieldDeclaration
+import com.github.javaparser.ast.body.MethodDeclaration
+import com.github.javaparser.ast.stmt.BlockStmt
 import org.jetbrains.research.testspark.tools.ToolUtils
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.application.PathManager
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
+import org.jetbrains.research.testspark.bundles.kex.KexMessagesBundle
 import org.jetbrains.research.testspark.core.data.TestCase
 import org.jetbrains.research.testspark.core.data.TestGenerationData
 import org.jetbrains.research.testspark.core.monitor.ErrorMonitor
@@ -19,7 +26,6 @@ import org.jetbrains.research.testspark.tools.template.generation.ProcessManager
 import java.io.*
 import java.net.URL
 import java.util.concurrent.TimeUnit
-import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 
 import kotlin.io.path.Path
@@ -65,7 +71,8 @@ class KexProcessManager(
                 "python3",
                 "./kex.py",
                 "--classpath",
-                "$projectClassPath/target/classes", // TODO how to reliably get the path to 'root of compiled files'? (only that works)
+                // TODO how to reliably get the path to 'root of class files', of the class for which tests are generated
+                "$projectClassPath/target/classes",
                 "--target",
                 classFQN,
                 "--output",
@@ -79,7 +86,6 @@ class KexProcessManager(
 
             ensureKexExists()
 
-            var kexOutStr: String = ""
             try {
                 val proc = ProcessBuilder(cmd)
                     .directory(File(kexHome))
@@ -88,56 +94,71 @@ class KexProcessManager(
                     .start()
 
                 proc.waitFor(kexProcessTimeout, TimeUnit.SECONDS)
-                kexOutStr = proc.inputStream.bufferedReader().readText()
+                val kexOutStr = proc.inputStream.bufferedReader().readText()
 
 
                 log.info("OUTPUT FROM KEX:\n $kexOutStr")
+//            System.err.println("PRINTING from STDERR:\n $kexOutStr")
 
             } catch (e: IOException) {
                 e.printStackTrace()
             }
 
-            System.err.println("PRINTING from STDERR:\n $kexOutStr")
 
             log.info("Save generated test suite and test cases into the project workspace")
             val report = IJReport()
             val imports = mutableSetOf<String>()
+            var packageStr = ""
 
             val generatedTestsDir = File(
                 "$resultName/tests/${
                     classFQN.substringBeforeLast('.').replace('.', '/')
                 }"
-            ) //TODO does this include the .java?
+            )
             if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { //collect all generated tests into a report
                 for ((index, file) in generatedTestsDir.listFiles()!!.withIndex()) {
                     val testCode = file.readText()
-                    // collecting all test code
-                    report.testCaseList[index] =
-                        TestCase(index, file.name, file.readText(), setOf()) //TODO Maybe name includes path here?
+
+
+                    if (file.name.contains("Equality") || file.name.contains("Reflection")) {
+                        // collecting all methods
+                        val classBody = (StaticJavaParser.parse(testCode).findFirst(ClassOrInterfaceDeclaration::class.java).get()) as BodyDeclaration<ClassOrInterfaceDeclaration>
+                        report.testCaseList[index] =
+                            TestCase(index, file.name.substringBefore('.'), classBody.toString(), setOf())
+                        ///*classDecl.childNodes.drop(2).fold(String()) { acc, e -> acc.plus(e).plus("\n") }*/
+                    } else {
+                        //merge @before and @test annotated methods into a single method
+                        report.testCaseList[index] =
+                            TestCase(index, file.name.substringBefore('.'), extractTestMethod(file), setOf())
+                    }
                     // extracting just imports out of the test code
                     imports.addAll(ToolUtils.getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!))
+                    packageStr = ToolUtils.getPackageFromTestSuiteCode(testCode)
                 }
             } else {
                 kexErrorManager.errorProcess(
-                    "Generated tests don't exist. Must have had a problem running Kex",
+                    KexMessagesBundle.get("TestsDontExist"),
                     project,
                     errorMonitor
                 )
+            }
+            val junit5Imports = mutableSetOf<String>()
+            for (import in imports) {
+                junit5Imports.add(import.replace("org.junit", "org.junit.jupiter.api"))
             }
 
             ToolUtils.transferToIJTestCases(report)
             ToolUtils.saveData(
                 project,
                 report,
-                ToolUtils.getPackageFromTestSuiteCode(report.testCaseList[0]?.testCode),
+                packageStr,
                 imports,
                 projectContext.fileUrlAsString!!,
                 generatedTestsData,
             )
         } catch (e: Exception) {
-            // TODO remove hardcoded string
             kexErrorManager.errorProcess(
-                "An Exception occurred while executing Kex".format(e.message),
+                KexMessagesBundle.get("KexErrorCommon").format(e.message),
                 project,
                 errorMonitor
             )
@@ -150,6 +171,28 @@ class KexProcessManager(
             StandardRequestManagerFactory(project).getRequestManager(project),
             errorMonitor
         )
+    }
+
+    private fun extractTestMethod(file: File?): String {
+        val compilationUnit = StaticJavaParser.parse(file)
+        // Kex generates a Class for each test case. Each class has exactly two methods:
+        // at index 1 an @Before annotated method
+        // at index 2 an @Test annotated method
+        // merge the two into a single method
+        val methods = compilationUnit.findAll(MethodDeclaration::class.java)
+        val methodStmts = methods.map { it.body.map { it.statements }.orElse(NodeList()) }
+
+        val fields = NodeList(
+            compilationUnit.findAll(FieldDeclaration::class.java)
+                .filterNot { it.isPublic }//drops the timeout
+                .map { it.toString() }
+                .map { StaticJavaParser.parseStatement(it) }
+        )
+        fields.addAll(methodStmts[1])
+        fields.addAll(methodStmts[2])
+        methods[2].setBody(BlockStmt(fields))
+        val testCase = methods[2].toString()
+        return testCase
     }
 
     private fun ensureKexExists() {
