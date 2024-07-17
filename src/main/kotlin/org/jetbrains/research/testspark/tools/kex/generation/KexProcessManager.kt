@@ -122,18 +122,19 @@ class KexProcessManager(
 
                     if (file.name.contains("Equality") || file.name.contains("Reflection")) {
                         // collecting all methods
-                        val classBody = (StaticJavaParser.parse(testCode).findFirst(ClassOrInterfaceDeclaration::class.java).get()) as BodyDeclaration<ClassOrInterfaceDeclaration>
-                        report.testCaseList[index] =
-                            TestCase(index, file.name.substringBefore('.'), classBody.toString(), setOf())
-                        ///*classDecl.childNodes.drop(2).fold(String()) { acc, e -> acc.plus(e).plus("\n") }*/
+                        generatedTestsData.otherInfo += "${getHelperClassBody(testCode)}\n"
                     } else {
                         //merge @before and @test annotated methods into a single method
                         report.testCaseList[index] =
-                            TestCase(index, file.name.substringBefore('.'), extractTestMethod(file), setOf())
+                            TestCase(index, file.name.substringBefore('.'), extractTestMethod(file, index).toString(), setOf())
                     }
                     // extracting just imports out of the test code
-                    imports.addAll(ToolUtils.getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!))
-                    packageStr = ToolUtils.getPackageFromTestSuiteCode(testCode)
+                    // remove imports from helper classes
+                    imports.addAll(ToolUtils.getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!)
+                        .filterNot {it.contains("import static org.example.EqualityUtils.*;")
+                                || it.contains("import static org.example.ReflectionUtils.*")
+                        })
+                    packageStr = ToolUtils.getPackageFromTestSuiteCode(testCode) //TODO remove: repeatedly set with same value
                 }
             } else {
                 kexErrorManager.errorProcess(
@@ -141,10 +142,6 @@ class KexProcessManager(
                     project,
                     errorMonitor
                 )
-            }
-            val junit5Imports = mutableSetOf<String>()
-            for (import in imports) {
-                junit5Imports.add(import.replace("org.junit", "org.junit.jupiter.api"))
             }
 
             ToolUtils.transferToIJTestCases(report)
@@ -173,7 +170,12 @@ class KexProcessManager(
         )
     }
 
-    private fun extractTestMethod(file: File?): String {
+    //TODO  This method could use the parser
+    private fun getHelperClassBody(testCode: String) =
+        (StaticJavaParser.parse(testCode).findFirst(ClassOrInterfaceDeclaration::class.java)
+            .get()).toString().substringAfter('{').substringBeforeLast('}')
+
+    private fun extractTestMethod(file: File?, id: Int): MethodDeclaration {
         val compilationUnit = StaticJavaParser.parse(file)
         // Kex generates a Class for each test case. Each class has exactly two methods:
         // at index 1 an @Before annotated method
@@ -191,8 +193,8 @@ class KexProcessManager(
         fields.addAll(methodStmts[1])
         fields.addAll(methodStmts[2])
         methods[2].setBody(BlockStmt(fields))
-        val testCase = methods[2].toString()
-        return testCase
+        methods[2].setName("test$id")
+        return methods[2]
     }
 
     private fun ensureKexExists() {
