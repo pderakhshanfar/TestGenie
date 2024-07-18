@@ -6,6 +6,7 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diff.DiffColors
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.FoldingModel
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.markup.HighlighterLayer
@@ -15,6 +16,7 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.EditorTextField
+import com.intellij.psi.*
 import com.intellij.ui.JBColor
 import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBScrollPane
@@ -248,7 +250,6 @@ class TestCasePanelBuilder(
         panel.add(Box.createRigidArea(Dimension(0, 5)))
 
         addLanguageTextFieldListener(languageTextField)
-
         return panel
     }
 
@@ -358,15 +359,62 @@ class TestCasePanelBuilder(
         })
     }
 
+    private fun applyTestMethodFolding(editor: Editor) {
+        val document = editor.document
+        val project = editor.project ?: return
+
+        // Get the PSI file associated with the document
+        val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document) ?: return
+
+        // Run the folding operation
+        editor.foldingModel.runBatchFoldingOperation {
+            val foldingModel: FoldingModel = editor.foldingModel
+
+            var startOffset = document.textLength
+            var endOffset = 0
+            // Find start and end offsets for folding
+            psiFile.accept(object : JavaRecursiveElementVisitor() {
+                override fun visitMethod(element: PsiMethod) {
+                    super.visitMethod(element)
+                    if (notHasTestAnnotation(element)) {
+                        if (startOffset > element.textRange.startOffset)
+                            startOffset = element.textRange.startOffset
+                        if (endOffset < element.textRange.endOffset)
+                            endOffset = element.textRange.endOffset
+                    }
+                }
+                override fun visitField(field: PsiField) {
+                    super.visitField(field)
+                    if (startOffset > field.textRange.startOffset)
+                        startOffset = field.textRange.startOffset
+                    if (endOffset <   field.textRange.endOffset)
+                        endOffset =   field.textRange.endOffset
+                }
+            })
+
+            val foldRegion = foldingModel.addFoldRegion(startOffset, endOffset, "...")
+
+            foldRegion?.isExpanded = false // Collapsed by default
+        }
+    }
+
+    private fun notHasTestAnnotation(element: PsiModifierListOwner): Boolean {
+        return element.modifierList?.annotations?.any { it.qualifiedName == "org.junit.Test" } == false
+    }
+
     /**
      * Updates the user interface based on the provided code.
      */
     private fun update() {
         updateTestCaseInformation()
 
+        val editor = languageTextField.editor
+        if (editor != null) {
+            applyTestMethodFolding(editor)
+        }
+
         val lastRunCode = lastRunCodes[currentRequestNumber - 1]
         languageTextField.editor?.markupModel?.removeAllHighlighters()
-
         resetButton.isEnabled = testCase.testCode != initialCodes[currentRequestNumber - 1]
         resetToLastRunButton.isEnabled = testCase.testCode != lastRunCode
 
