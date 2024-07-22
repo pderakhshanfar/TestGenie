@@ -227,6 +227,11 @@
                 instance="org.jetbrains.research.testspark.settings.evosuite.EvoSuiteSettingsConfigurable"
                 id="EvoSuiteSettings"
                 displayName="EvoSuite"/>
+        <projectConfigurable
+                parentId="PluginSettings"
+                instance="org.jetbrains.research.testspark.settings.kex.KexSettingsConfigurable"
+                id="KexSettings"
+                displayName="Kex"/>
 
         <!-- Notifications -->
         <notificationGroup id="Execution Error"

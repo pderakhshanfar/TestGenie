@@ -40,6 +40,7 @@ class KexProcessManager(
     private val kexProcessTimeout: Long = 12000000
     private val kexErrorManager: KexErrorManager = KexErrorManager()
     private val log = Logger.getInstance(this::class.java)
+    private val HEAP_SIZE = 8 //in GB
 
     private val kexVersion = KexDefaultsBundle.get("kexVersion")
     private val kexHome = KexDefaultsBundle.get("kexHome")
@@ -78,7 +79,7 @@ class KexProcessManager(
 
             val cmd = mutableListOf<String>(
                 javaExecPath,
-                "-Xmx8g", //TODO 8g heapsize in properties bundle
+                "-Xmx${HEAP_SIZE}g", //TODO 8g heapsize in properties bundle
                 "-Djava.security.manager",
                 "-Djava.security.policy==$kexHome/kex.policy",
                 "-Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener",
