@@ -2,7 +2,6 @@ package org.jetbrains.research.testspark.tools.kex.generation
 
 import com.github.javaparser.StaticJavaParser
 import com.github.javaparser.ast.NodeList
-import com.github.javaparser.ast.body.BodyDeclaration
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.ast.body.FieldDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
@@ -43,7 +42,7 @@ class KexProcessManager(
     private val kexVersion = KexDefaultsBundle.get("kexVersion")
     private val kexHome = KexDefaultsBundle.get("kexHome")
 
-    private var kexPath =
+    private var kexExecPath =
         "$kexHome${ToolUtils.sep}kex-runner${ToolUtils.sep}target${ToolUtils.sep}kex-runner-$kexVersion-jar-with-dependencies.jar"
 
 
@@ -67,43 +66,51 @@ class KexProcessManager(
 
             //TODO cmd should have cases for codeType, which is just hardcoded to CodeType.CLASS here
 
+
+            ensureKexExists()
+
             val cmd = mutableListOf<String>(
-                "python3",
-                "./kex.py",
-                "--classpath",
-                // TODO how to reliably get the path to 'root of class files', of the class for which tests are generated
-                "$projectClassPath/target/classes",
-                "--target",
-                classFQN,
-                "--output",
-                resultName,
-                "--mode",
-                "concolic"
+                "java", //TODO Use project's java not system java. Add >v8 check
+                "-Xmx8g", //TODO 8g heapsize in properties bundle
+                "-Djava.security.manager",
+                "-Djava.security.policy==$kexHome/kex.policy",
+                "-Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener",
+            )
+
+            File("$kexHome/runtime-deps/modules.info").readLines().forEach { cmd.add("--add-opens"); cmd.add(it) }
+            cmd.add("--illegal-access=warn")
+
+            cmd.addAll(
+                listOf(
+                    "-jar", kexExecPath,
+                    "--classpath", "$projectClassPath/target/classes", // TODO how to reliably get the path to 'root of class files', of the class for which tests are generated
+                    "--target", classFQN,
+                    "--output", resultName,
+                    "--mode", "concolic" //TODO make user option in settings
+                )
             )
 
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
             log.info("Starting Kex with arguments: $cmdString")
 
-            ensureKexExists()
-
             try {
-                val proc = ProcessBuilder(cmd)
+                val pb = ProcessBuilder(cmd)
                     .directory(File(kexHome))
                     .redirectOutput(ProcessBuilder.Redirect.PIPE)
                     .redirectError(ProcessBuilder.Redirect.PIPE)
-                    .start()
 
+                pb.environment()["KEX_HOME"] = kexHome
+                val proc = pb.start()
                 proc.waitFor(kexProcessTimeout, TimeUnit.SECONDS)
                 val kexOutStr = proc.inputStream.bufferedReader().readText()
 
 
                 log.info("OUTPUT FROM KEX:\n $kexOutStr")
-//            System.err.println("PRINTING from STDERR:\n $kexOutStr")
+            System.err.println("PRINTING from STDERR:\n $kexOutStr")
 
             } catch (e: IOException) {
                 e.printStackTrace()
             }
-
 
             log.info("Save generated test suite and test cases into the project workspace")
             val report = IJReport()
@@ -126,15 +133,22 @@ class KexProcessManager(
                     } else {
                         //merge @before and @test annotated methods into a single method
                         report.testCaseList[index] =
-                            TestCase(index, file.name.substringBefore('.'), extractTestMethod(file, index).toString(), setOf())
+                            TestCase(
+                                index,
+                                file.name.substringBefore('.'),
+                                extractTestMethod(file, index).toString(),
+                                setOf()
+                            )
                     }
                     // extracting just imports out of the test code
                     // remove imports from helper classes
                     imports.addAll(ToolUtils.getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!)
-                        .filterNot {it.contains("import static org.example.EqualityUtils.*;")
-                                || it.contains("import static org.example.ReflectionUtils.*")
+                        .filterNot {
+                            it.contains("import static org.example.EqualityUtils.*;")
+                                    || it.contains("import static org.example.ReflectionUtils.*")
                         })
-                    packageStr = ToolUtils.getPackageFromTestSuiteCode(testCode) //TODO remove: repeatedly set with same value
+                    packageStr =
+                        ToolUtils.getPackageFromTestSuiteCode(testCode) //TODO remove repeatedly setting with same value
                 }
             } else {
                 kexErrorManager.errorProcess(
@@ -208,7 +222,7 @@ class KexProcessManager(
             "$kexHome/kex.py",
             "$kexHome/kex.policy",
             "$kexHome/runtime-deps/modules.info",
-            kexPath
+            kexExecPath
         )
         if (requiredFiles.map { File(it).exists() }.all { it }) {
             log.info("Specified kex jar found, skipping update")
