@@ -9,6 +9,8 @@ import com.github.javaparser.ast.stmt.BlockStmt
 import org.jetbrains.research.testspark.tools.ToolUtils
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.projectRoots.JavaSdk
+import com.intellij.openapi.projectRoots.Sdk
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.bundles.kex.KexMessagesBundle
 import org.jetbrains.research.testspark.core.data.TestCase
@@ -26,7 +28,7 @@ import java.io.*
 import java.net.URL
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
-
+import com.intellij.openapi.roots.ProjectRootManager
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 
@@ -59,9 +61,14 @@ class KexProcessManager(
 
             val projectClassPath = projectContext.projectClassPath!!
             val classFQN = projectContext.classFQN!!
-            val baseDir = generatedTestsData.baseDir!!
             val resultName = "${generatedTestsData.resultPath}${ToolUtils.sep}KexResult"
+            val projectSdk = ProjectRootManager.getInstance(project).projectSdk!!
+            val javaExecPath = ToolUtils.osJoin(projectSdk.homePath!!, "bin", "java")
 
+            val x = "\\d+".toRegex().find(projectSdk.versionString!!)!!.value.toInt()
+            if (x < 8) {
+                //TODO error
+            }
             Path(generatedTestsData.resultPath).createDirectories()
 
             //TODO cmd should have cases for codeType, which is just hardcoded to CodeType.CLASS here
@@ -70,7 +77,7 @@ class KexProcessManager(
             ensureKexExists()
 
             val cmd = mutableListOf<String>(
-                "java", //TODO Use project's java not system java. Add >v8 check
+                javaExecPath,
                 "-Xmx8g", //TODO 8g heapsize in properties bundle
                 "-Djava.security.manager",
                 "-Djava.security.policy==$kexHome/kex.policy",
