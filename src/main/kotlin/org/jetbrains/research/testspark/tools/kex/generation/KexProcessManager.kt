@@ -17,10 +17,6 @@ import org.jetbrains.research.testspark.core.data.TestCase
 import org.jetbrains.research.testspark.core.data.TestGenerationData
 import org.jetbrains.research.testspark.core.monitor.ErrorMonitor
 import org.jetbrains.research.testspark.core.progress.CustomProgressIndicator
-import org.jetbrains.research.testspark.data.FragmentToTestData
-import org.jetbrains.research.testspark.data.IJReport
-import org.jetbrains.research.testspark.data.ProjectContext
-import org.jetbrains.research.testspark.data.UIContext
 import org.jetbrains.research.testspark.tools.kex.error.KexErrorManager
 import org.jetbrains.research.testspark.tools.llm.generation.StandardRequestManagerFactory
 import org.jetbrains.research.testspark.tools.template.generation.ProcessManager
@@ -29,8 +25,10 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 import com.intellij.openapi.roots.ProjectRootManager
+import org.jetbrains.research.testspark.data.*
 import org.jetbrains.research.testspark.services.KexSettingsService
 import org.jetbrains.research.testspark.settings.kex.KexSettingsState
+import org.jetbrains.research.testspark.tools.kex.KexSettingsArguments
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 
@@ -75,47 +73,16 @@ class KexProcessManager(
             }
             Path(generatedTestsData.resultPath).createDirectories()
 
-            //TODO cmd should have cases for codeType, which is just hardcoded to CodeType.CLASS here
-
+            val target: String = when (codeType.type!!) {
+                CodeType.CLASS -> classFQN
+                CodeType.METHOD -> "$classFQN::${codeType.objectDescription}"
+//TODO error
+                CodeType.LINE -> "error"
+            }
 
             ensureKexExists()
 
-            val cmd = mutableListOf<String>(
-                javaExecPath,
-                "-Xmx${HEAP_SIZE}g", //TODO 8g heapsize in properties bundle
-                "-Djava.security.manager",
-                "-Djava.security.policy==$kexHome/kex.policy",
-                "-Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener",
-            )
-
-            File("$kexHome/runtime-deps/modules.info").readLines().forEach { cmd.add("--add-opens"); cmd.add(it) }
-            cmd.add("--illegal-access=warn")
-
-            cmd.addAll(
-                listOf(
-                    "-jar", kexExecPath,
-                    "--classpath", "$projectClassPath/target/classes", // TODO how to reliably get the path to 'root of class files', of the class for which tests are generated
-                    "--target", classFQN,
-                    "--output", resultName,
-                    "--mode", kexSettingsState.kexMode.toString()
-                )
-            )
-            if (kexSettingsState.option.isNotBlank()) {
-                cmd.add("--option")
-                cmd.add(kexSettingsState.option)
-            }
-            if (kexSettingsState.crashDepth.isNotBlank()) {
-                cmd.add("--depth")
-                cmd.add(kexSettingsState.crashDepth)
-            }
-            if (kexSettingsState.crashTrace.isNotBlank()) {
-                cmd.add("--trace")
-                cmd.add(kexSettingsState.crashTrace)
-            }
-            if (kexSettingsState.libraryTarget.isNotBlank()) {
-                cmd.add("--libraryTarget")
-                cmd.add(kexSettingsState.libraryTarget)
-            }
+            val cmd = KexSettingsArguments().buildCommand(javaExecPath, projectClassPath, target, resultName, kexSettingsState, kexExecPath)
 
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
             log.info("Starting Kex with arguments: $cmdString")
@@ -211,6 +178,7 @@ class KexProcessManager(
         )
     }
 
+
     //TODO  This method could use the parser
     private fun getHelperClassBody(testCode: String) =
         (StaticJavaParser.parse(testCode).findFirst(ClassOrInterfaceDeclaration::class.java)
@@ -246,7 +214,6 @@ class KexProcessManager(
 
         val requiredFiles = listOf(
             "$kexHome/kex.ini",
-            "$kexHome/kex.py",
             "$kexHome/kex.policy",
             "$kexHome/runtime-deps/modules.info",
             kexExecPath

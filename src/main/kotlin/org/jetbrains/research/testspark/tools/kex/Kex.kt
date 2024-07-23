@@ -8,6 +8,7 @@ import org.jetbrains.research.testspark.actions.controllers.TestGenerationContro
 import org.jetbrains.research.testspark.data.CodeType
 import org.jetbrains.research.testspark.data.FragmentToTestData
 import org.jetbrains.research.testspark.langwrappers.PsiHelper
+import org.jetbrains.research.testspark.langwrappers.PsiMethodWrapper
 import org.jetbrains.research.testspark.services.PluginSettingsService
 import org.jetbrains.research.testspark.tools.Pipeline
 import org.jetbrains.research.testspark.tools.kex.generation.KexProcessManager
@@ -57,7 +58,15 @@ class Kex(override val name: String = "Kex") : Tool {
         testSamplesCode: String,
         testGenerationController: TestGenerationController
     ) {
-        TODO("Not yet implemented")
+        log.info("Starting tests generation for method by Kex")
+        val psiMethod: PsiMethodWrapper = psiHelper.getSurroundingMethod(caretOffset)!!
+        createPipeline(project, psiHelper, caretOffset, fileUrl, testGenerationController).runTestGeneration(
+            getKexProcessManager(project),
+            FragmentToTestData(
+                CodeType.METHOD,
+                "${psiMethod.name}(${psiMethod.parameterTypes.joinToString(",")}):${psiMethod.returnType}",
+            ),
+        )
     }
 
     override fun generateTestsForLine(

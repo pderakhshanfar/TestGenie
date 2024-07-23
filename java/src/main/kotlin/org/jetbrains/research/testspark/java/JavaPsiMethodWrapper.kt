@@ -37,6 +37,15 @@ class JavaPsiMethodWrapper(private val psiMethod: PsiMethod) : PsiMethodWrapper 
     override val signature: String
         get() = buildSignature(psiMethod)
 
+    override val parameterNames: List<String>
+        get() = psiMethod.parameterList.parameters.map { it.name}
+
+    override val parameterTypes: List<String>
+        get() = psiMethod.parameterList.parameters.map { it.type.presentableText }
+
+    override val returnType: String
+        get() = psiMethod.returnType?.presentableText ?: "void"
+
     val parameterList = psiMethod.parameterList
 
     val isConstructor: Boolean = psiMethod.isConstructor

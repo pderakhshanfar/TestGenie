@@ -37,6 +37,15 @@ class KotlinPsiMethodWrapper(val psiFunction: KtFunction) : PsiMethodWrapper {
     override val signature: String
         get() = buildSignature(psiFunction)
 
+    override val parameterNames: List<String>
+        get() = psiFunction.valueParameters.map { it.name ?: "" }
+
+    override val parameterTypes: List<String>
+        get() = psiFunction.valueParameters.map { it.typeReference?.text ?: "Any" }
+
+    override val returnType: String
+        get() = psiFunction.typeReference?.text ?: "Unit"
+
     val parameterList = psiFunction.valueParameterList
 
     val isPrimaryConstructor: Boolean = psiFunction is KtPrimaryConstructor
@@ -50,8 +59,8 @@ class KotlinPsiMethodWrapper(val psiFunction: KtFunction) : PsiMethodWrapper {
         val containingInterface = containingClass?.isInterfaceClass()
         // ensure that the function is a non-abstract method defined in an interface
         name != "<init>" && // function is not a constructor
-            bodyExpression != null && // function has an implementation
-            containingInterface == true // function is defined within an interface
+                bodyExpression != null && // function has an implementation
+                containingInterface == true // function is defined within an interface
     }
 
     override fun containsLine(lineNumber: Int): Boolean {
