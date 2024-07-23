@@ -29,6 +29,8 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipInputStream
 import com.intellij.openapi.roots.ProjectRootManager
+import org.jetbrains.research.testspark.services.KexSettingsService
+import org.jetbrains.research.testspark.settings.kex.KexSettingsState
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 
@@ -44,7 +46,8 @@ class KexProcessManager(
 
     private val kexVersion = KexDefaultsBundle.get("kexVersion")
     private val kexHome = KexDefaultsBundle.get("kexHome")
-
+    private val kexSettingsState: KexSettingsState
+        get() = project.getService(KexSettingsService::class.java).state
     private var kexExecPath =
         "$kexHome${ToolUtils.sep}kex-runner${ToolUtils.sep}target${ToolUtils.sep}kex-runner-$kexVersion-jar-with-dependencies.jar"
 
@@ -94,9 +97,25 @@ class KexProcessManager(
                     "--classpath", "$projectClassPath/target/classes", // TODO how to reliably get the path to 'root of class files', of the class for which tests are generated
                     "--target", classFQN,
                     "--output", resultName,
-                    "--mode", "concolic" //TODO make user option in settings
+                    "--mode", kexSettingsState.kexMode.toString()
                 )
             )
+            if (kexSettingsState.option.isNotBlank()) {
+                cmd.add("--option")
+                cmd.add(kexSettingsState.option)
+            }
+            if (kexSettingsState.crashDepth.isNotBlank()) {
+                cmd.add("--depth")
+                cmd.add(kexSettingsState.crashDepth)
+            }
+            if (kexSettingsState.crashTrace.isNotBlank()) {
+                cmd.add("--trace")
+                cmd.add(kexSettingsState.crashTrace)
+            }
+            if (kexSettingsState.libraryTarget.isNotBlank()) {
+                cmd.add("--libraryTarget")
+                cmd.add(kexSettingsState.libraryTarget)
+            }
 
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
             log.info("Starting Kex with arguments: $cmdString")

@@ -26,6 +26,11 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
      */
     override fun reset() {
         settingsComponent!!.kexPath = kexSettingsState.kexHome
+        settingsComponent!!.kexMode = kexSettingsState.kexMode
+        settingsComponent!!.option = kexSettingsState.option
+        settingsComponent!!.crashDepth = kexSettingsState.crashDepth
+        settingsComponent!!.crashTrace = kexSettingsState.crashTrace
+        settingsComponent!!.libraryTarget = kexSettingsState.libraryTarget
     }
 
     /**
@@ -35,6 +40,11 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
      */
     override fun isModified(): Boolean {
         return settingsComponent!!.kexPath != kexSettingsState.kexHome
+                || settingsComponent!!.kexMode != kexSettingsState.kexMode
+                || settingsComponent!!.option != kexSettingsState.option
+                || settingsComponent!!.crashDepth != kexSettingsState.crashDepth
+                || settingsComponent!!.crashTrace != kexSettingsState.crashTrace
+                || settingsComponent!!.libraryTarget != kexSettingsState.libraryTarget
     }
 
     /**
@@ -42,6 +52,11 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
      */
     override fun apply() {
         kexSettingsState.kexHome = settingsComponent!!.kexPath
+        kexSettingsState.kexMode = settingsComponent!!.kexMode
+        kexSettingsState.option = settingsComponent!!.option
+        kexSettingsState.crashDepth = settingsComponent!!.crashDepth
+        kexSettingsState.crashTrace = settingsComponent!!.crashTrace
+        kexSettingsState.libraryTarget = settingsComponent!!.libraryTarget
     }
 
     /**
