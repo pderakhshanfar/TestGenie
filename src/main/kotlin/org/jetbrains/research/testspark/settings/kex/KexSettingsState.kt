@@ -11,9 +11,6 @@ data class KexSettingsState(
     var kexHome: String = DefaultKexSettingsState.kexHome,
     var kexMode: KexMode = DefaultKexSettingsState.kexMode,
     var option: String = DefaultKexSettingsState.option,
-    var crashDepth: String = DefaultKexSettingsState.crashDepth,
-    var crashTrace: String = DefaultKexSettingsState.crashTrace,
-    var libraryTarget: String = DefaultKexSettingsState.libraryTarget,
 ) {
 
     /**
@@ -24,8 +21,5 @@ data class KexSettingsState(
         var kexHome: String = KexDefaultsBundle.get("kexHome")
         var kexMode: KexMode = KexMode.Concolic
         var option: String = KexDefaultsBundle.get("option")
-        var crashDepth: String = KexDefaultsBundle.get("crashDepth")
-        var crashTrace: String = KexDefaultsBundle.get("crashTrace")
-        var libraryTarget: String = KexDefaultsBundle.get("libraryTarget")
     }
 }

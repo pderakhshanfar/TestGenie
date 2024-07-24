@@ -20,9 +20,6 @@ class KexSettingsComponent  : SettingsComponent {
     private var kexPathTextField = JTextField()
     private var kexModeSelector = ComboBox(KexMode.entries.toTypedArray())
     private var optionTextField = JTextField() //TODO comments for these
-    private var crashDepthTextField = JTextField()
-    private var crashTraceTextField = JTextField()
-    private var libraryTargetTextField = JTextField()
 
     var kexPath: String
         get() = kexPathTextField.text
@@ -42,22 +39,6 @@ class KexSettingsComponent  : SettingsComponent {
             optionTextField.text = x
         }
 
-    var crashDepth: String
-        get() = crashDepthTextField.text
-        set(x) {
-            crashDepthTextField.text = x
-        }
-    var crashTrace: String
-        get() = crashTraceTextField.text
-        set(x) {
-            crashTraceTextField.text = x
-        }
-    var libraryTarget: String
-        get() = libraryTargetTextField.text
-        set(x) {
-            libraryTargetTextField.text = x
-        }
-
     init {
         super.initComponent()
     }
@@ -71,9 +52,6 @@ class KexSettingsComponent  : SettingsComponent {
             .addLabeledComponent(JBLabel(KexLabelsBundle.get("kexHome")), kexPathTextField, 10, false)
             .addLabeledComponent(JBLabel(KexLabelsBundle.get("kexMode")), kexModeSelector, 10, false)
             .addLabeledComponent(JBLabel(KexLabelsBundle.get("option")), optionTextField, 10, false)
-            .addLabeledComponent(JBLabel(KexLabelsBundle.get("crashDepth")), crashDepthTextField, 10, false)
-            .addLabeledComponent(JBLabel(KexLabelsBundle.get("crashTrace")), crashTraceTextField, 10, false)
-            .addLabeledComponent(JBLabel(KexLabelsBundle.get("libraryTarget")), libraryTargetTextField, 10, false)
             .panel
     }
 

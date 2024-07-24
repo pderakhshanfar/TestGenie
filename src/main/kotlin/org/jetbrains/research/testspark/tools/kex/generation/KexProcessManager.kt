@@ -87,24 +87,24 @@ class KexProcessManager(
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
             log.info("Starting Kex with arguments: $cmdString")
 
-//            try {
-//                val pb = ProcessBuilder(cmd)
-//                    .directory(File(kexHome))
-//                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
-//                    .redirectError(ProcessBuilder.Redirect.PIPE)
-//
-//                pb.environment()["KEX_HOME"] = kexHome
-//                val proc = pb.start()
-//                proc.waitFor(kexProcessTimeout, TimeUnit.SECONDS)
-//                val kexOutStr = proc.inputStream.bufferedReader().readText()
-//
-//
-//                log.info("OUTPUT FROM KEX:\n $kexOutStr")
-//            System.err.println("PRINTING from STDERR:\n $kexOutStr")
-//
-//            } catch (e: IOException) {
-//                e.printStackTrace()
-//            }
+            try {
+                val pb = ProcessBuilder(cmd)
+                    .directory(File(kexHome))
+                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                    .redirectError(ProcessBuilder.Redirect.PIPE)
+
+                pb.environment()["KEX_HOME"] = kexHome
+                val proc = pb.start()
+                proc.waitFor(kexProcessTimeout, TimeUnit.SECONDS)
+                val kexOutStr = proc.inputStream.bufferedReader().readText()
+
+
+                log.info("OUTPUT FROM KEX:\n $kexOutStr")
+            System.err.println("PRINTING from STDERR:\n $kexOutStr")
+
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
 
             log.info("Save generated test suite and test cases into the project workspace")
             val report = IJReport()

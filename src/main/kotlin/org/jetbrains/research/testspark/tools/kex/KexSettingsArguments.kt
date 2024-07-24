@@ -45,18 +45,6 @@ class KexSettingsArguments {
             cmd.add("--option")
             cmd.add(kexSettingsState.option)
         }
-        if (kexSettingsState.crashDepth.isNotBlank()) {
-            cmd.add("--depth")
-            cmd.add(kexSettingsState.crashDepth)
-        }
-        if (kexSettingsState.crashTrace.isNotBlank()) {
-            cmd.add("--trace")
-            cmd.add(kexSettingsState.crashTrace)
-        }
-        if (kexSettingsState.libraryTarget.isNotBlank()) {
-            cmd.add("--libraryTarget")
-            cmd.add(kexSettingsState.libraryTarget)
-        }
         return cmd
     }
 
