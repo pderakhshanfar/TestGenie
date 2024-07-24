@@ -22,6 +22,7 @@ import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import org.jetbrains.research.testspark.bundles.llm.LLMMessagesBundle
+import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.research.testspark.bundles.plugin.PluginLabelsBundle
 import org.jetbrains.research.testspark.bundles.plugin.PluginMessagesBundle
 import org.jetbrains.research.testspark.core.data.JUnitVersion
@@ -359,6 +360,13 @@ class TestCasePanelBuilder(
         })
     }
 
+    private fun updateRange(offsets : Pair<Int,Int>, element: PsiElement): Pair<Int, Int> {
+        var (start, end) = offsets
+        start = if (start < element.textRange.startOffset) start else element.textRange.startOffset
+        end =  if (end > element.textRange.endOffset) end else element.textRange.endOffset
+        return start to end
+    }
+
     private fun applyTestMethodFolding(editor: Editor) {
         val document = editor.document
         val project = editor.project ?: return
@@ -370,36 +378,45 @@ class TestCasePanelBuilder(
         editor.foldingModel.runBatchFoldingOperation {
             val foldingModel: FoldingModel = editor.foldingModel
 
-            var startOffset = document.textLength
-            var endOffset = 0
+            var range = document.textLength to 0
             // Find start and end offsets for folding
             psiFile.accept(object : JavaRecursiveElementVisitor() {
                 override fun visitMethod(element: PsiMethod) {
                     super.visitMethod(element)
-                    if (notHasTestAnnotation(element)) {
-                        if (startOffset > element.textRange.startOffset)
-                            startOffset = element.textRange.startOffset
-                        if (endOffset < element.textRange.endOffset)
-                            endOffset = element.textRange.endOffset
+                    if (hasTestAnnotation(element)) {
+                        val (startOffset, endOffset) = range
+                        //apply accumulating folding range
+                        foldingModel.addFoldRegion(startOffset, endOffset, "...")?.isExpanded = false
+                        // reset folding range after end of test method
+                        range = element.endOffset to element.endOffset
+                    } else {
+                        range = updateRange(range , element)
+
                     }
                 }
+
                 override fun visitField(field: PsiField) {
                     super.visitField(field)
-                    if (startOffset > field.textRange.startOffset)
-                        startOffset = field.textRange.startOffset
-                    if (endOffset <   field.textRange.endOffset)
-                        endOffset =   field.textRange.endOffset
+                    range = updateRange(range, field)
                 }
+
+                //These are example static initializers which can also be hidden from the user
+                override fun visitClassInitializer(initializer: PsiClassInitializer) {
+                    super.visitClassInitializer(initializer)
+                    range = updateRange(range, initializer)
+                }
+
             })
 
+            val (startOffset, endOffset) = range
             val foldRegion = foldingModel.addFoldRegion(startOffset, endOffset, "...")
 
             foldRegion?.isExpanded = false // Collapsed by default
         }
     }
 
-    private fun notHasTestAnnotation(element: PsiModifierListOwner): Boolean {
-        return element.modifierList?.annotations?.any { it.qualifiedName == "org.junit.Test" } == false
+    private fun hasTestAnnotation(element: PsiModifierListOwner): Boolean {
+        return element.modifierList?.annotations?.any { it.qualifiedName == "org.junit.Test" } == true //TODO should work for junit 5 and anythin in general
     }
 
     /**
