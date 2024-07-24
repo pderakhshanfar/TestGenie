@@ -12,6 +12,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.roots.ProjectRootManager
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.bundles.kex.KexMessagesBundle
 import org.jetbrains.research.testspark.core.data.TestCase
@@ -26,7 +27,7 @@ import org.jetbrains.research.testspark.tools.kex.KexSettingsArguments
 import org.jetbrains.research.testspark.tools.kex.error.KexErrorManager
 import org.jetbrains.research.testspark.tools.llm.generation.StandardRequestManagerFactory
 import org.jetbrains.research.testspark.tools.template.generation.ProcessManager
-import java.io.*
+import java.io.File
 import java.net.URL
 import java.nio.charset.Charset
 import java.util.zip.ZipInputStream
@@ -44,7 +45,26 @@ class KexProcessManager(
     private val HEAP_SIZE = 8 //in GB
 
     private val kexVersion = KexDefaultsBundle.get("kexVersion")
-    private val kexHome = KexDefaultsBundle.get("kexHome")
+    private var kexHome: String = KexDefaultsBundle.get("kexHome")
+
+    init {
+        if (kexHome.isBlank()) { // use default cache location
+            val userHome = System.getProperty("user.home")
+            val kexHomeFile = when {
+                // On Windows, use the LOCALAPPDATA environment variable
+                //TODO windows stuff is untested
+                System.getProperty("os.name").startsWith("Windows") -> System.getenv("LOCALAPPDATA")
+                    ?.let { File(it, ToolUtils.osJoin("JetBrains", "TestSpark", "kex")) }
+                // On Unix-like systems, use the ~/.cache directory
+                else -> File(userHome, ToolUtils.osJoin(".cache", "JetBrains", "TestSpark", "kex"))
+            }
+            // Ensure the cache directory exists
+            if (kexHomeFile != null && !kexHomeFile.exists()) {
+                kexHomeFile.mkdirs()
+            }
+            kexHome = kexHomeFile.toString()
+        }
+    }
     private val kexSettingsState: KexSettingsState
         get() = project.getService(KexSettingsService::class.java).state
     private var kexExecPath =
@@ -83,7 +103,15 @@ class KexProcessManager(
 
             ensureKexExists()
 
-            val cmd = KexSettingsArguments().buildCommand(javaExecPath, projectClassPath, target, resultName, kexSettingsState, kexExecPath)
+            val cmd = KexSettingsArguments().buildCommand(
+                javaExecPath,
+                projectClassPath,
+                target,
+                resultName,
+                kexSettingsState,
+                kexExecPath,
+                kexHome
+            )
 
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
             log.info("Starting Kex with arguments: $cmdString")

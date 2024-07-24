@@ -10,9 +10,9 @@ class KexSettingsArguments {
             classFQN: String,
             resultName: String,
             kexSettingsState: KexSettingsState,
-            kexExecPath: String
+            kexExecPath: String,
+            kexHome: String
         ): MutableList<String> {
-            val kexHome = kexSettingsState.kexHome
             val HEAP_SIZE = "8"
             val cmd = mutableListOf<String>(
             javaExecPath,
