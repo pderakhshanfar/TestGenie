@@ -6,29 +6,30 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.ast.body.FieldDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.stmt.BlockStmt
-import org.jetbrains.research.testspark.tools.ToolUtils
+import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.process.*
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.projectRoots.JavaSdk
-import com.intellij.openapi.projectRoots.Sdk
+import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.util.Key
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.bundles.kex.KexMessagesBundle
 import org.jetbrains.research.testspark.core.data.TestCase
 import org.jetbrains.research.testspark.core.data.TestGenerationData
 import org.jetbrains.research.testspark.core.monitor.ErrorMonitor
 import org.jetbrains.research.testspark.core.progress.CustomProgressIndicator
+import org.jetbrains.research.testspark.data.*
+import org.jetbrains.research.testspark.services.KexSettingsService
+import org.jetbrains.research.testspark.settings.kex.KexSettingsState
+import org.jetbrains.research.testspark.tools.ToolUtils
+import org.jetbrains.research.testspark.tools.kex.KexSettingsArguments
 import org.jetbrains.research.testspark.tools.kex.error.KexErrorManager
 import org.jetbrains.research.testspark.tools.llm.generation.StandardRequestManagerFactory
 import org.jetbrains.research.testspark.tools.template.generation.ProcessManager
 import java.io.*
 import java.net.URL
-import java.util.concurrent.TimeUnit
+import java.nio.charset.Charset
 import java.util.zip.ZipInputStream
-import com.intellij.openapi.roots.ProjectRootManager
-import org.jetbrains.research.testspark.data.*
-import org.jetbrains.research.testspark.services.KexSettingsService
-import org.jetbrains.research.testspark.settings.kex.KexSettingsState
-import org.jetbrains.research.testspark.tools.kex.KexSettingsArguments
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 
@@ -87,23 +88,48 @@ class KexProcessManager(
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
             log.info("Starting Kex with arguments: $cmdString")
 
+            // run kex as subprocess
             try {
-                val pb = ProcessBuilder(cmd)
-                    .directory(File(kexHome))
-                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
-                    .redirectError(ProcessBuilder.Redirect.PIPE)
+                val kexProcess = GeneralCommandLine(cmd)
+                kexProcess.charset = Charset.forName("UTF-8")
+                kexProcess.workDirectory = File(kexHome)
+                kexProcess.environment["KEX_HOME"] = kexHome
 
-                pb.environment()["KEX_HOME"] = kexHome
-                val proc = pb.start()
-                proc.waitFor(kexProcessTimeout, TimeUnit.SECONDS)
-                val kexOutStr = proc.inputStream.bufferedReader().readText()
+                val handler = OSProcessHandler(kexProcess)
+                val output = ProcessOutput()
+                ProcessTerminatedListener.attach(handler)
 
+                handler.addProcessListener(object : ProcessAdapter() {
+                    override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+                        if (ToolUtils.isProcessStopped(errorMonitor, indicator)) {
+                            handler.destroyProcess()
+                            return
+                        }
+                        if (outputType.toString() == "stdout") {
+                            output.appendStdout(event.text)
+                        } else if (outputType.toString() == "stderr") {
+                            output.appendStderr(event.text)
+                        }
+                    }
 
-                log.info("OUTPUT FROM KEX:\n $kexOutStr")
-            System.err.println("PRINTING from STDERR:\n $kexOutStr")
+                    override fun processTerminated(event: ProcessEvent) {
+                        log.info("Process terminated with exit code: ${event.exitCode}")
+                        log.info("OUTPUT FROM KEX:\n ${output.stdout}")
+//                        log.error("PRINTING from STDERR:\n ${output.stderr}")
+                    }
+                })
+
+                handler.startNotify()
+
+                // Wait for the process to complete with a timeout
+                if (!handler.waitFor(kexProcessTimeout)) {
+                    handler.destroyProcess()
+                    throw IOException("Process timed out and was terminated")
+                }
 
             } catch (e: IOException) {
                 e.printStackTrace()
+                log.error("Error running KEX process", e)
             }
 
             log.info("Save generated test suite and test cases into the project workspace")
