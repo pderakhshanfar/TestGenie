@@ -1,12 +1,19 @@
 package org.jetbrains.research.testspark.tools.kex
 
+import com.intellij.openapi.module.Module
+import com.intellij.openapi.roots.CompilerModuleExtension
+import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.vfs.VfsUtil
+import org.jetbrains.research.testspark.data.ProjectContext
 import org.jetbrains.research.testspark.settings.kex.KexSettingsState
 import java.io.File
+import java.nio.file.Path
+import java.nio.file.Paths
 
 class KexSettingsArguments {
     fun buildCommand(
         javaExecPath: String,
-        projectClassPath: String,
+        projectContext: ProjectContext,
         classFQN: String,
         resultName: String,
         kexSettingsState: KexSettingsState,
@@ -30,7 +37,7 @@ class KexSettingsArguments {
                 "-jar",
                 kexExecPath,
                 "--classpath",
-                "$projectClassPath/target/classes", // TODO how to reliably get the path to 'root of class files', of the class for which tests are generated
+                getBuildOutputDirectory(projectContext.cutModule!!)!!.toString(),
                 "--target",
                 classFQN,
                 "--output",
@@ -46,5 +53,11 @@ class KexSettingsArguments {
             cmd.add(kexSettingsState.option)
         }
         return cmd
+    }
+
+    fun getBuildOutputDirectory(module: Module): Path? {
+        val moduleRootManager = ModuleRootManager.getInstance(module)
+        val compilerProjectExtension = moduleRootManager.getModuleExtension(CompilerModuleExtension::class.java)
+        return compilerProjectExtension?.compilerOutputUrl?.let { Paths.get(VfsUtil.urlToPath(it)) }
     }
 }
