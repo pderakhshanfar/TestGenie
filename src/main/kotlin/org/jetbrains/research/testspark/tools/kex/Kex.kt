@@ -64,7 +64,7 @@ class Kex(override val name: String = "Kex") : Tool {
             getKexProcessManager(project),
             FragmentToTestData(
                 CodeType.METHOD,
-                "${psiMethod.name}(${psiMethod.parameterTypes.joinToString(",")}):${psiMethod.returnType}",
+                "${psiMethod.name}(${psiMethod.parameterTypes.joinToString(",")}):${psiMethod.returnType}".replace("boolean", "bool").replace("String", "java.lang.String"),
             ),
         )
     }

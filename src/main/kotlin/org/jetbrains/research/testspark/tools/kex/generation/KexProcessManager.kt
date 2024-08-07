@@ -52,10 +52,10 @@ class KexProcessManager(
     private val kexProcessTimeout: Long = 12000000
     private val kexErrorManager: KexErrorManager = KexErrorManager()
     private val log = Logger.getInstance(this::class.java)
-    private val HEAP_SIZE = 8 // in GB
 
     private val kexVersion = KexDefaultsBundle.get("kexVersion")
-    private var kexHome: String = KexDefaultsBundle.get("kexHome")
+    private val kexUrl = "https://github.com/edwin1729/kex/releases/download/$kexVersion/kex-$kexVersion.zip"
+    private var kexHome: String = kexSettingsState.kexHome
 
     init {
         if (kexHome.isBlank()) { // use default cache location
@@ -288,11 +288,9 @@ class KexProcessManager(
         }
 
         log.info("Kex executable and helper files not found, downloading Kex")
-        val downloadUrl =
-            "https://github.com/vorpal-research/kex/releases/download/$kexVersion/kex-$kexVersion.zip"
         val stream =
             try {
-                URL(downloadUrl).openStream()
+                URL(kexUrl).openStream()
             } catch (e: Exception) {
                 log.error("Error fetching latest kex custom release - $e")
                 return // TODO fail test generation here

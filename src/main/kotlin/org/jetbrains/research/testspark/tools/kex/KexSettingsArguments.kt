@@ -4,6 +4,7 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.roots.CompilerModuleExtension
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VfsUtil
+import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.data.ProjectContext
 import org.jetbrains.research.testspark.settings.kex.KexSettingsState
 import java.io.File
@@ -32,6 +33,15 @@ class KexSettingsArguments {
         File("$kexHome/runtime-deps/modules.info").readLines().forEach { cmd.add("--add-opens"); cmd.add(it) }
         cmd.add("--illegal-access=warn")
 
+        val options = listOf(
+            listOf("kex", "minimizeTestSuite", KexDefaultsBundle.get("minimizeTestSuite")),
+            listOf("testGen", "maxTests", kexSettingsState.maxTests.toString()),
+            listOf("concolic", "timeLimit", kexSettingsState.timeLimit.toString()),
+            listOf("symbolic", "timeLimit", kexSettingsState.timeLimit.toString()),
+        )
+            .map { it.joinToString(":") }
+            .joinToString(" ")
+
         cmd.addAll(
             listOf(
                 "-jar",
@@ -39,23 +49,25 @@ class KexSettingsArguments {
                 "--classpath",
                 getBuildOutputDirectory(projectContext.cutModule!!)!!.toString(),
                 "--target",
-                classFQN,
+                "\"$classFQN\"",
                 "--output",
                 resultName,
                 "--mode",
                 kexSettingsState.kexMode.toString(),
+                "--option",
+                options,
             ),
         )
 
         // adding user provided command line arguments
-        if (kexSettingsState.option.isNotBlank()) {
+        if (kexSettingsState.otherOptions.isNotBlank()) {
             cmd.add("--option")
-            cmd.add(kexSettingsState.option)
+            cmd.add(kexSettingsState.otherOptions)
         }
         return cmd
     }
 
-    fun getBuildOutputDirectory(module: Module): Path? {
+    private fun getBuildOutputDirectory(module: Module): Path? {
         val moduleRootManager = ModuleRootManager.getInstance(module)
         val compilerProjectExtension = moduleRootManager.getModuleExtension(CompilerModuleExtension::class.java)
         return compilerProjectExtension?.compilerOutputUrl?.let { Paths.get(VfsUtil.urlToPath(it)) }

@@ -17,7 +17,7 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
      * @return the panel used for displaying settings
      */
     override fun createComponent(): JComponent? {
-        settingsComponent = KexSettingsComponent()
+        settingsComponent = KexSettingsComponent(project)
         return settingsComponent!!.panel
     }
 
@@ -27,7 +27,9 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
     override fun reset() {
         settingsComponent!!.kexPath = kexSettingsState.kexHome
         settingsComponent!!.kexMode = kexSettingsState.kexMode
-        settingsComponent!!.option = kexSettingsState.option
+        settingsComponent!!.option = kexSettingsState.otherOptions
+        settingsComponent!!.maxTests = kexSettingsState.maxTests
+        settingsComponent!!.timeLimit = kexSettingsState.timeLimit
     }
 
     /**
@@ -38,7 +40,9 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
     override fun isModified(): Boolean {
         return settingsComponent!!.kexPath != kexSettingsState.kexHome ||
             settingsComponent!!.kexMode != kexSettingsState.kexMode ||
-            settingsComponent!!.option != kexSettingsState.option
+            settingsComponent!!.option != kexSettingsState.otherOptions ||
+            settingsComponent!!.maxTests != kexSettingsState.maxTests ||
+            settingsComponent!!.timeLimit != kexSettingsState.timeLimit
     }
 
     /**
@@ -47,7 +51,9 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
     override fun apply() {
         kexSettingsState.kexHome = settingsComponent!!.kexPath
         kexSettingsState.kexMode = settingsComponent!!.kexMode
-        kexSettingsState.option = settingsComponent!!.option
+        kexSettingsState.otherOptions = settingsComponent!!.option
+        kexSettingsState.maxTests = settingsComponent!!.maxTests
+        kexSettingsState.timeLimit = settingsComponent!!.timeLimit
     }
 
     /**
