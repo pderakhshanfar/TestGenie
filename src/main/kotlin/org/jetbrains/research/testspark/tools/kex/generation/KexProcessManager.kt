@@ -7,7 +7,11 @@ import com.github.javaparser.ast.body.FieldDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.stmt.BlockStmt
 import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.execution.process.*
+import com.intellij.execution.process.OSProcessHandler
+import com.intellij.execution.process.ProcessAdapter
+import com.intellij.execution.process.ProcessEvent
+import com.intellij.execution.process.ProcessOutput
+import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
@@ -19,7 +23,11 @@ import org.jetbrains.research.testspark.core.data.TestCase
 import org.jetbrains.research.testspark.core.data.TestGenerationData
 import org.jetbrains.research.testspark.core.monitor.ErrorMonitor
 import org.jetbrains.research.testspark.core.progress.CustomProgressIndicator
-import org.jetbrains.research.testspark.data.*
+import org.jetbrains.research.testspark.data.CodeType
+import org.jetbrains.research.testspark.data.FragmentToTestData
+import org.jetbrains.research.testspark.data.IJReport
+import org.jetbrains.research.testspark.data.ProjectContext
+import org.jetbrains.research.testspark.data.UIContext
 import org.jetbrains.research.testspark.services.KexSettingsService
 import org.jetbrains.research.testspark.settings.kex.KexSettingsState
 import org.jetbrains.research.testspark.tools.ToolUtils
@@ -28,6 +36,8 @@ import org.jetbrains.research.testspark.tools.kex.error.KexErrorManager
 import org.jetbrains.research.testspark.tools.llm.generation.StandardRequestManagerFactory
 import org.jetbrains.research.testspark.tools.template.generation.ProcessManager
 import java.io.File
+import java.io.File
+import java.io.IOException
 import java.net.URL
 import java.nio.charset.Charset
 import java.util.zip.ZipInputStream
@@ -36,13 +46,13 @@ import kotlin.io.path.createDirectories
 
 class KexProcessManager(
     private val project: Project,
-    private val projectPath: String
+    private val projectPath: String,
 ) : ProcessManager {
 
     private val kexProcessTimeout: Long = 12000000
     private val kexErrorManager: KexErrorManager = KexErrorManager()
     private val log = Logger.getInstance(this::class.java)
-    private val HEAP_SIZE = 8 //in GB
+    private val HEAP_SIZE = 8 // in GB
 
     private val kexVersion = KexDefaultsBundle.get("kexVersion")
     private var kexHome: String = KexDefaultsBundle.get("kexHome")
@@ -52,7 +62,7 @@ class KexProcessManager(
             val userHome = System.getProperty("user.home")
             val kexHomeFile = when {
                 // On Windows, use the LOCALAPPDATA environment variable
-                //TODO windows stuff is untested
+                // TODO windows stuff is untested
                 System.getProperty("os.name").startsWith("Windows") -> System.getenv("LOCALAPPDATA")
                     ?.let { File(it, ToolUtils.osJoin("JetBrains", "TestSpark", "kex")) }
                 // On Unix-like systems, use the ~/.cache directory
@@ -70,14 +80,13 @@ class KexProcessManager(
     private var kexExecPath =
         "$kexHome${ToolUtils.sep}kex-runner${ToolUtils.sep}target${ToolUtils.sep}kex-runner-$kexVersion-jar-with-dependencies.jar"
 
-
     override fun runTestGenerator(
         indicator: CustomProgressIndicator,
         codeType: FragmentToTestData,
         packageName: String,
         projectContext: ProjectContext,
         generatedTestsData: TestGenerationData,
-        errorMonitor: ErrorMonitor
+        errorMonitor: ErrorMonitor,
     ): UIContext? {
         try {
             if (ToolUtils.isProcessStopped(errorMonitor, indicator)) return null
@@ -90,14 +99,14 @@ class KexProcessManager(
 
             val x = "\\d+".toRegex().find(projectSdk.versionString!!)!!.value.toInt()
             if (x < 8) {
-                //TODO error
+                // TODO error
             }
             Path(generatedTestsData.resultPath).createDirectories()
 
             val target: String = when (codeType.type!!) {
                 CodeType.CLASS -> classFQN
                 CodeType.METHOD -> "$classFQN::${codeType.objectDescription}"
-//TODO error
+// TODO error
                 CodeType.LINE -> "error"
             }
 
@@ -110,7 +119,7 @@ class KexProcessManager(
                 resultName,
                 kexSettingsState,
                 kexExecPath,
-                kexHome
+                kexHome,
             )
 
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
@@ -154,7 +163,6 @@ class KexProcessManager(
                     handler.destroyProcess()
                     throw IOException("Process timed out and was terminated")
                 }
-
             } catch (e: IOException) {
                 e.printStackTrace()
                 log.error("Error running KEX process", e)
@@ -168,41 +176,42 @@ class KexProcessManager(
             val generatedTestsDir = File(
                 "$resultName/tests/${
                     classFQN.substringBeforeLast('.').replace('.', '/')
-                }"
+                }",
             )
-            if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { //collect all generated tests into a report
+            if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { // collect all generated tests into a report
                 for ((index, file) in generatedTestsDir.listFiles()!!.withIndex()) {
                     val testCode = file.readText()
-
 
                     if (file.name.contains("Equality") || file.name.contains("Reflection")) {
                         // collecting all methods
                         generatedTestsData.otherInfo += "${getHelperClassBody(testCode)}\n"
                     } else {
-                        //merge @before and @test annotated methods into a single method
+                        // merge @before and @test annotated methods into a single method
                         report.testCaseList[index] =
                             TestCase(
                                 index,
                                 file.name.substringBefore('.'),
                                 extractTestMethod(file, index).toString(),
-                                setOf()
+                                setOf(),
                             )
                     }
                     // extracting just imports out of the test code
                     // remove imports from helper classes
-                    imports.addAll(ToolUtils.getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!)
-                        .filterNot {
-                            it.contains("import static org.example.EqualityUtils.*;")
-                                    || it.contains("import static org.example.ReflectionUtils.*")
-                        })
+                    imports.addAll(
+                        ToolUtils.getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!)
+                            .filterNot {
+                                it.contains("import static org.example.EqualityUtils.*;") ||
+                                    it.contains("import static org.example.ReflectionUtils.*")
+                            },
+                    )
                     packageStr =
-                        ToolUtils.getPackageFromTestSuiteCode(testCode) //TODO remove repeatedly setting with same value
+                        ToolUtils.getPackageFromTestSuiteCode(testCode) // TODO remove repeatedly setting with same value
                 }
             } else {
                 kexErrorManager.errorProcess(
                     KexMessagesBundle.get("TestsDontExist"),
                     project,
-                    errorMonitor
+                    errorMonitor,
                 )
             }
 
@@ -219,7 +228,7 @@ class KexProcessManager(
             kexErrorManager.errorProcess(
                 KexMessagesBundle.get("KexErrorCommon").format(e.message),
                 project,
-                errorMonitor
+                errorMonitor,
             )
             e.printStackTrace()
         }
@@ -228,15 +237,16 @@ class KexProcessManager(
             projectContext,
             generatedTestsData,
             StandardRequestManagerFactory(project).getRequestManager(project),
-            errorMonitor
+            errorMonitor,
         )
     }
 
-
-    //TODO  This method could use the parser
+    // TODO  This method could use the parser
     private fun getHelperClassBody(testCode: String) =
-        (StaticJavaParser.parse(testCode).findFirst(ClassOrInterfaceDeclaration::class.java)
-            .get()).toString().substringAfter('{').substringBeforeLast('}')
+        (
+            StaticJavaParser.parse(testCode).findFirst(ClassOrInterfaceDeclaration::class.java)
+                .get()
+            ).toString().substringAfter('{').substringBeforeLast('}')
 
     private fun extractTestMethod(file: File?, id: Int): MethodDeclaration {
         val compilationUnit = StaticJavaParser.parse(file)
@@ -249,9 +259,9 @@ class KexProcessManager(
 
         val fields = NodeList(
             compilationUnit.findAll(FieldDeclaration::class.java)
-                .filterNot { it.isPublic }//drops the timeout
+                .filterNot { it.isPublic } // drops the timeout
                 .map { it.toString() }
-                .map { StaticJavaParser.parseStatement(it) }
+                .map { StaticJavaParser.parseStatement(it) },
         )
         fields.addAll(methodStmts[1])
         fields.addAll(methodStmts[2])
@@ -270,7 +280,7 @@ class KexProcessManager(
             "$kexHome/kex.ini",
             "$kexHome/kex.policy",
             "$kexHome/runtime-deps/modules.info",
-            kexExecPath
+            kexExecPath,
         )
         if (requiredFiles.map { File(it).exists() }.all { it }) {
             log.info("Specified kex jar found, skipping update")
@@ -285,16 +295,16 @@ class KexProcessManager(
                 URL(downloadUrl).openStream()
             } catch (e: Exception) {
                 log.error("Error fetching latest kex custom release - $e")
-                return //TODO fail test generation here
+                return // TODO fail test generation here
             }
 
-        //TODO this can fail unexpectedly if a file with the same name as a required directory exists
+        // TODO this can fail unexpectedly if a file with the same name as a required directory exists
         // inside the given kexHome path.
         ZipInputStream(stream).use { zipInputStream ->
             generateSequence { zipInputStream.nextEntry }
                 .filterNot { it.isDirectory }
                 .forEach { entry ->
-                    val file = File("${kexHome}/${entry.name}")
+                    val file = File("$kexHome/${entry.name}")
                     file.parentFile.mkdirs() // makes any directories required
                     file.outputStream().use { output ->
                         zipInputStream.copyTo(output)

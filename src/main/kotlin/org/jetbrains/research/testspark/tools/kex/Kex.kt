@@ -18,7 +18,7 @@ import java.io.File
 class Kex(override val name: String = "Kex") : Tool {
     private val log = Logger.getInstance(this::class.java)
 
-        /**
+    /**
      * Returns a new instance of KexProcessManager for the given project.
      *
      * @param project The IntelliJ IDEA project for which the KexProcessManager is created.
@@ -56,7 +56,7 @@ class Kex(override val name: String = "Kex") : Tool {
         caretOffset: Int,
         fileUrl: String?,
         testSamplesCode: String,
-        testGenerationController: TestGenerationController
+        testGenerationController: TestGenerationController,
     ) {
         log.info("Starting tests generation for method by Kex")
         val psiMethod: PsiMethodWrapper = psiHelper.getSurroundingMethod(caretOffset)!!
@@ -75,7 +75,7 @@ class Kex(override val name: String = "Kex") : Tool {
         caretOffset: Int,
         fileUrl: String?,
         testSamplesCode: String,
-        testGenerationController: TestGenerationController
+        testGenerationController: TestGenerationController,
     ) {
         TODO("Not yet implemented")
     }

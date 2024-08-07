@@ -6,7 +6,7 @@ import org.jetbrains.research.testspark.settings.template.SettingsConfigurable
 import javax.swing.JComponent
 
 class KexSettingsConfigurable(private val project: Project) : SettingsConfigurable {
-        private val kexSettingsState: KexSettingsState
+    private val kexSettingsState: KexSettingsState
         get() = project.getService(KexSettingsService::class.java).state
 
     var settingsComponent: KexSettingsComponent? = null
@@ -36,9 +36,9 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
      * @return whether any setting has been modified
      */
     override fun isModified(): Boolean {
-        return settingsComponent!!.kexPath != kexSettingsState.kexHome
-                || settingsComponent!!.kexMode != kexSettingsState.kexMode
-                || settingsComponent!!.option != kexSettingsState.option
+        return settingsComponent!!.kexPath != kexSettingsState.kexHome ||
+            settingsComponent!!.kexMode != kexSettingsState.kexMode ||
+            settingsComponent!!.option != kexSettingsState.option
     }
 
     /**

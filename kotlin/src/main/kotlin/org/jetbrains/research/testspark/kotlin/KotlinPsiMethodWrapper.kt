@@ -59,8 +59,8 @@ class KotlinPsiMethodWrapper(val psiFunction: KtFunction) : PsiMethodWrapper {
         val containingInterface = containingClass?.isInterfaceClass()
         // ensure that the function is a non-abstract method defined in an interface
         name != "<init>" && // function is not a constructor
-                bodyExpression != null && // function has an implementation
-                containingInterface == true // function is defined within an interface
+            bodyExpression != null && // function has an implementation
+            containingInterface == true // function is defined within an interface
     }
 
     override fun containsLine(lineNumber: Int): Boolean {

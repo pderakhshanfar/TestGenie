@@ -55,9 +55,8 @@ class KexErrorManager : ErrorManager {
         project: Project,
         kexProcessTimeout: Long,
         indicator: CustomProgressIndicator,
-        errorMonitor: ErrorMonitor
+        errorMonitor: ErrorMonitor,
     ): Boolean {
-
         // exceeded timeout error
 //        if (!handler.waitFor(kexProcessTimeout)) {
 //            errorProcess(
@@ -73,7 +72,7 @@ class KexErrorManager : ErrorManager {
             errorProcess(output, project, errorMonitor)
             return false
         }
-        return true;
-        //TODO few other error cases to import from evosuite
+        return true
+        // TODO few other error cases to import from evosuite
     }
 }

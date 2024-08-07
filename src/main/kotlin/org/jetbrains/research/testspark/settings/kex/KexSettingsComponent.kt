@@ -14,12 +14,12 @@ import javax.swing.JTextField
 /**
  * This class displays and captures changes to the values of the Settings entries.
  */
-class KexSettingsComponent  : SettingsComponent {
+class KexSettingsComponent : SettingsComponent {
     var panel: JPanel? = null
 
     private var kexPathTextField = JTextField()
     private var kexModeSelector = ComboBox(KexMode.entries.toTypedArray())
-    private var optionTextField = JTextField() //TODO comments for these
+    private var optionTextField = JTextField() // TODO comments for these
 
     var kexPath: String
         get() = kexPathTextField.text
