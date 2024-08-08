@@ -22,8 +22,11 @@ import com.intellij.psi.PsiClassInitializer
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifierListOwner
+import com.intellij.psi.PsiTreeChangeAdapter
+import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.ui.JBColor
 import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBScrollPane
@@ -64,7 +67,7 @@ import java.awt.Dimension
 import java.awt.Toolkit
 import java.awt.datatransfer.Clipboard
 import java.awt.datatransfer.StringSelection
-import java.util.Queue
+import java.util.*
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JButton
@@ -258,6 +261,12 @@ class TestCasePanelBuilder(
         panel.add(Box.createRigidArea(Dimension(0, 5)))
 
         addLanguageTextFieldListener(languageTextField)
+        PsiManager.getInstance(project).addPsiTreeChangeListener(object : PsiTreeChangeAdapter() {
+            override fun childAdded(event: PsiTreeChangeEvent) {
+                val file = event.file ?: return
+                foldHelperCode()
+            }
+        })
         return panel
     }
 
@@ -374,7 +383,12 @@ class TestCasePanelBuilder(
         return start to end
     }
 
-    private fun applyTestMethodFolding(editor: Editor) {
+    /**
+     * Folds helper methods, fields when displaying to user,
+     * so they can focus on the important @Test annotated methods
+     */
+    private fun foldHelperCode() {
+        val editor = languageTextField.editor!!
         val document = editor.document
         val project = editor.project ?: return
 
@@ -429,11 +443,6 @@ class TestCasePanelBuilder(
      */
     private fun update() {
         updateTestCaseInformation()
-
-        val editor = languageTextField.editor
-        if (editor != null) {
-            applyTestMethodFolding(editor)
-        }
 
         val lastRunCode = lastRunCodes[currentRequestNumber - 1]
         languageTextField.editor?.markupModel?.removeAllHighlighters()
