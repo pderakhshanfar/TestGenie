@@ -77,7 +77,15 @@ class Kex(override val name: String = "Kex") : Tool {
         testSamplesCode: String,
         testGenerationController: TestGenerationController,
     ) {
-        TODO("Not yet implemented")
+        log.info("Starting tests generation for line by EvoSuite")
+        val selectedLine: Int = psiHelper.getSurroundingLine(caretOffset)!!
+        createPipeline(project, psiHelper, caretOffset, fileUrl, testGenerationController).runTestGeneration(
+            getKexProcessManager(project),
+            FragmentToTestData(
+                CodeType.LINE,
+                selectedLine,
+            ),
+        )
     }
 
     /**

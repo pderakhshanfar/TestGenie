@@ -21,7 +21,6 @@ import org.jetbrains.research.testspark.core.monitor.ErrorMonitor
 import org.jetbrains.research.testspark.core.progress.CustomProgressIndicator
 import org.jetbrains.research.testspark.core.test.SupportedLanguage
 import org.jetbrains.research.testspark.core.test.data.CodeType
-import org.jetbrains.research.testspark.core.utils.CommandLineRunner
 import org.jetbrains.research.testspark.data.FragmentToTestData
 import org.jetbrains.research.testspark.data.IJReport
 import org.jetbrains.research.testspark.data.ProjectContext
@@ -83,33 +82,7 @@ class EvoSuiteProcessManager(
         try {
             if (ToolUtils.isProcessStopped(errorMonitor, indicator)) return null
 
-            val regex = Regex("version \"(.*?)\"")
-
-            // Resolving relative java path, if it's possible
-            if (evoSuiteSettingsState.javaPath.startsWith("~/")) {
-                val pathEvalCommandResult =
-                    CommandLineRunner.run(arrayListOf("eval", "ls", evoSuiteSettingsState.javaPath))
-                if (!pathEvalCommandResult.isSuccessful()) {
-                    evoSuiteErrorManager.errorProcess(
-                        EvoSuiteMessagesBundle.get("incorrectJavaVersion"),
-                        project,
-                        errorMonitor
-                    )
-                    return null
-                }
-                evoSuiteSettingsState.javaPath = pathEvalCommandResult.executionMessage.trim('\n')
-            }
-
-            val versionCommandResult = CommandLineRunner.run(arrayListOf(evoSuiteSettingsState.javaPath, "-version"))
-
-            log.info("Version command result: exit code '${versionCommandResult.exitCode}', message '${versionCommandResult.executionMessage}'")
-            val version = regex.find(versionCommandResult.executionMessage)
-                ?.groupValues
-                ?.get(1)
-                ?.split(".")
-                ?.get(0)
-                ?.toInt()
-
+            val version = ToolUtils.getJavaVersion(evoSuiteSettingsState.javaPath)
             if (version == null || version > 11) {
                 evoSuiteErrorManager.errorProcess(EvoSuiteMessagesBundle.get("incorrectJavaVersion"), project, errorMonitor)
                 return null

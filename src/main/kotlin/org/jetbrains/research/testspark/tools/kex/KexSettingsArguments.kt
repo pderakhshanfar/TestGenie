@@ -5,7 +5,6 @@ import com.intellij.openapi.roots.CompilerModuleExtension
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VfsUtil
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
-import org.jetbrains.research.testspark.data.ProjectContext
 import org.jetbrains.research.testspark.settings.kex.KexSettingsState
 import java.io.File
 import java.nio.file.Path
@@ -14,17 +13,16 @@ import java.nio.file.Paths
 class KexSettingsArguments {
     fun buildCommand(
         javaExecPath: String,
-        projectContext: ProjectContext,
+        module: Module,
         classFQN: String,
         resultName: String,
         kexSettingsState: KexSettingsState,
         kexExecPath: String,
         kexHome: String,
     ): MutableList<String> {
-        val HEAP_SIZE = "8"
         val cmd = mutableListOf<String>(
             javaExecPath,
-            "-Xmx${HEAP_SIZE}g", // TODO 8g heapsize in properties bundle
+            "-Xmx${KexDefaultsBundle.get("heapSize")}g",
             "-Djava.security.manager",
             "-Djava.security.policy==$kexHome/kex.policy",
             "-Dlogback.statusListenerClass=ch.qos.logback.core.status.NopStatusListener",
@@ -33,21 +31,13 @@ class KexSettingsArguments {
         File("$kexHome/runtime-deps/modules.info").readLines().forEach { cmd.add("--add-opens"); cmd.add(it) }
         cmd.add("--illegal-access=warn")
 
-        val options = listOf(
-            listOf("kex", "minimizeTestSuite", KexDefaultsBundle.get("minimizeTestSuite")),
-            listOf("testGen", "maxTests", kexSettingsState.maxTests.toString()),
-            listOf("concolic", "timeLimit", kexSettingsState.timeLimit.toString()),
-            listOf("symbolic", "timeLimit", kexSettingsState.timeLimit.toString()),
-        )
-            .map { it.joinToString(":") }
-            .joinToString(" ")
 
         cmd.addAll(
             listOf(
                 "-jar",
                 kexExecPath,
                 "--classpath",
-                getBuildOutputDirectory(projectContext.cutModule!!)!!.toString(),
+                getBuildOutputDirectory(module)!!.toString(),
                 "--target",
                 "\"$classFQN\"",
                 "--output",
@@ -55,14 +45,24 @@ class KexSettingsArguments {
                 "--mode",
                 kexSettingsState.kexMode.toString(),
                 "--option",
-                options,
             ),
         )
 
-        // adding user provided command line arguments
+        // Add options provided with help of settings ui
+        cmd.addAll(
+            listOf(
+                listOf("kex", "minimizeTestSuite", KexDefaultsBundle.get("minimizeTestSuite")),
+                listOf("testGen", "maxTests", kexSettingsState.maxTests.toString()),
+                listOf("concolic", "timeLimit", kexSettingsState.timeLimit.toString()),
+                listOf("symbolic", "timeLimit", kexSettingsState.timeLimit.toString()),
+            )
+                .map { it.joinToString(":") }
+        )
+
+        // adding explicitly provided user option
         if (kexSettingsState.otherOptions.isNotBlank()) {
-            cmd.add("--option")
-            cmd.add(kexSettingsState.otherOptions)
+            // break into a list of options if multiple are provided
+            cmd.addAll(kexSettingsState.otherOptions.splitToSequence(' '))
         }
         return cmd
     }

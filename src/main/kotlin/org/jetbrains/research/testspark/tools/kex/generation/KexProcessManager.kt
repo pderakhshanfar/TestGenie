@@ -91,30 +91,42 @@ class KexProcessManager(
         try {
             if (ToolUtils.isProcessStopped(errorMonitor, indicator)) return null
 
-            val projectClassPath = projectContext.projectClassPath!!
             val classFQN = projectContext.classFQN!!
             val resultName = "${generatedTestsData.resultPath}${ToolUtils.sep}KexResult"
             val projectSdk = ProjectRootManager.getInstance(project).projectSdk!!
             val javaExecPath = ToolUtils.osJoin(projectSdk.homePath!!, "bin", "java")
 
-            val x = "\\d+".toRegex().find(projectSdk.versionString!!)!!.value.toInt()
-            if (x < 8) {
-                // TODO error
-            }
-            Path(generatedTestsData.resultPath).createDirectories()
-
+            // set target argument and ensure not Line
             val target: String = when (codeType.type!!) {
                 CodeType.CLASS -> classFQN
                 CodeType.METHOD -> "$classFQN::${codeType.objectDescription}"
-// TODO error
-                CodeType.LINE -> "error"
+                CodeType.LINE -> run {
+                    kexErrorManager.errorProcess(
+                        KexMessagesBundle.get("unsupportedCodeTypeLine"),
+                        project,
+                        errorMonitor
+                    )
+                    return null
+                }
             }
 
-            ensureKexExists()
+            // Disallow old java versions
+            val version = ToolUtils.getJavaVersion(javaExecPath)
+            if (version == null || version < 8) {
+                kexErrorManager.errorProcess(KexMessagesBundle.get("incorrectJavaVersion"), project, errorMonitor)
+                return null
+            }
+            Path(generatedTestsData.resultPath).createDirectories()
+
+            // Download kex executable if not present
+            if (!ensureKexExists()) {
+                kexErrorManager.errorProcess(KexMessagesBundle.get("invalidUrl"), project, errorMonitor)
+                return null
+            }
 
             val cmd = KexSettingsArguments().buildCommand(
                 javaExecPath,
-                projectContext,
+                projectContext.cutModule!!,
                 target,
                 resultName,
                 kexSettingsState,
@@ -270,7 +282,13 @@ class KexProcessManager(
         return methods[2]
     }
 
-    private fun ensureKexExists() {
+    /**
+     * Ensures that the necessary files for Kex execution exist. If the files already exist, this method will return true.
+     * If any required file is missing, this method will attempt to download the necessary files.
+     *
+     * @return False if kex doesn't exist and files couldn't be downloaded
+     */
+    private fun ensureKexExists(): Boolean {
         val kexDir = File(kexHome)
         if (!kexDir.exists()) {
             kexDir.mkdirs()
@@ -284,7 +302,7 @@ class KexProcessManager(
         )
         if (requiredFiles.map { File(it).exists() }.all { it }) {
             log.info("Specified kex jar found, skipping update")
-            return
+            return true
         }
 
         log.info("Kex executable and helper files not found, downloading Kex")
@@ -293,7 +311,7 @@ class KexProcessManager(
                 URL(kexUrl).openStream()
             } catch (e: Exception) {
                 log.error("Error fetching latest kex custom release - $e")
-                return // TODO fail test generation here
+                return false
             }
 
         // TODO this can fail unexpectedly if a file with the same name as a required directory exists
@@ -310,5 +328,6 @@ class KexProcessManager(
                 }
         }
         log.info("Latest kex project successfully downloaded")
+        return true
     }
 }
