@@ -16,7 +16,6 @@ import org.jetbrains.research.testspark.core.utils.DataFilesUtil
 import org.jetbrains.research.testspark.data.IJTestCase
 import org.jetbrains.research.testspark.testmanager.TestGeneratorFactory
 import java.io.File
-import java.nio.file.Path
 
 object ToolUtils {
     val sep = File.separatorChar
@@ -101,7 +100,6 @@ object ToolUtils {
         }
         return buildPath
     }
-
 
     /**
      * @param path path of the java executable as String. Refactor to type Path eventually

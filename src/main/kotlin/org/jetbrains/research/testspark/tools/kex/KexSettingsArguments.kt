@@ -31,7 +31,6 @@ class KexSettingsArguments {
         File("$kexHome/runtime-deps/modules.info").readLines().forEach { cmd.add("--add-opens"); cmd.add(it) }
         cmd.add("--illegal-access=warn")
 
-
         cmd.addAll(
             listOf(
                 "-jar",
@@ -56,7 +55,7 @@ class KexSettingsArguments {
                 listOf("concolic", "timeLimit", kexSettingsState.timeLimit.toString()),
                 listOf("symbolic", "timeLimit", kexSettingsState.timeLimit.toString()),
             )
-                .map { it.joinToString(":") }
+                .map { it.joinToString(":") },
         )
 
         // adding explicitly provided user option

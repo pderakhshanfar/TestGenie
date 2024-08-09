@@ -104,7 +104,7 @@ class KexProcessManager(
                     kexErrorManager.errorProcess(
                         KexMessagesBundle.get("unsupportedCodeTypeLine"),
                         project,
-                        errorMonitor
+                        errorMonitor,
                     )
                     return null
                 }
