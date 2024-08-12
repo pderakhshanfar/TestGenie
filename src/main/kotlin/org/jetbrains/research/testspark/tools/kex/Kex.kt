@@ -115,13 +115,15 @@ class Kex(override val name: String = "Kex") : Tool {
      * @receiver The string from which to remove the generic type arguments.
      * @return The resulting string with generic type arguments removed.
      */
-    private fun removeGenerics(typeString: String):String {
+    private fun removeGenerics(typeString: String): String {
         val s = StringBuilder()
         var stack: Int = 0
         for (c in typeString) {
-            if (c == '<') ++stack
-            else if (c == '>') --stack
-            else if (stack == 0) s.append(c)
+            if (c == '<') {
+                ++stack
+            } else if (c == '>') {
+                --stack
+            } else if (stack == 0) s.append(c)
         }
         return s.toString()
     }

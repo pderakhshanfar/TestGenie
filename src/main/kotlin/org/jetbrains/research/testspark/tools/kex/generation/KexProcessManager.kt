@@ -21,6 +21,7 @@ import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.bundles.kex.KexMessagesBundle
 import org.jetbrains.research.testspark.core.data.TestCase
 import org.jetbrains.research.testspark.core.data.TestGenerationData
+import org.jetbrains.research.testspark.core.generation.llm.getImportsCodeFromTestSuiteCode
 import org.jetbrains.research.testspark.core.monitor.ErrorMonitor
 import org.jetbrains.research.testspark.core.progress.CustomProgressIndicator
 import org.jetbrains.research.testspark.data.CodeType
@@ -58,7 +59,8 @@ class KexProcessManager(
     private var kexHome: String = kexSettingsState.kexHome
 
     init {
-        if (kexHome.isBlank()) { // use default cache location
+        // use default cache location if not explicitly provided
+        if (kexHome.isBlank()) {
             val userHome = System.getProperty("user.home")
             val kexHomeFile = when {
                 // On Windows, use the LOCALAPPDATA environment variable
@@ -78,7 +80,7 @@ class KexProcessManager(
     private val kexSettingsState: KexSettingsState
         get() = project.getService(KexSettingsService::class.java).state
     private var kexExecPath =
-        "$kexHome${ToolUtils.sep}kex-runner${ToolUtils.sep}target${ToolUtils.sep}kex-runner-$kexVersion-jar-with-dependencies.jar"
+        ToolUtils.osJoin(kexHome, "kex-runner", "target", "kex-runner-$kexVersion-jar-with-dependencies.jar")
 
     override fun runTestGenerator(
         indicator: CustomProgressIndicator,
@@ -92,11 +94,11 @@ class KexProcessManager(
             if (ToolUtils.isProcessStopped(errorMonitor, indicator)) return null
 
             val classFQN = projectContext.classFQN!!
-            val resultName = "${generatedTestsData.resultPath}${ToolUtils.sep}KexResult"
+            val resultName = ToolUtils.osJoin(generatedTestsData.resultPath, "KexResult")
             val projectSdk = ProjectRootManager.getInstance(project).projectSdk!!
             val javaExecPath = ToolUtils.osJoin(projectSdk.homePath!!, "bin", "java")
 
-            // set target argument and ensure not Line
+            // set target argument for kex subprocess. ensure not Line codetype which is unsupported
             val target: String = when (codeType.type!!) {
                 CodeType.CLASS -> classFQN
                 CodeType.METHOD -> "$classFQN::${codeType.objectDescription}"
@@ -124,7 +126,7 @@ class KexProcessManager(
                 return null
             }
 
-            val cmd = KexSettingsArguments().buildCommand(
+            val cmd = KexSettingsArguments(
                 javaExecPath,
                 projectContext.cutModule!!,
                 target,
@@ -132,110 +134,17 @@ class KexProcessManager(
                 kexSettingsState,
                 kexExecPath,
                 kexHome,
-            )
+            ).buildCommand()
 
             val cmdString = cmd.fold(String()) { acc, e -> acc.plus(e).plus(" ") }
             log.info("Starting Kex with arguments: $cmdString")
 
             // run kex as subprocess
-            try {
-                val kexProcess = GeneralCommandLine(cmd)
-                kexProcess.charset = Charset.forName("UTF-8")
-                kexProcess.workDirectory = File(kexHome)
-                kexProcess.environment["KEX_HOME"] = kexHome
-
-                val handler = OSProcessHandler(kexProcess)
-                val output = ProcessOutput()
-                ProcessTerminatedListener.attach(handler)
-
-                handler.addProcessListener(object : ProcessAdapter() {
-                    override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-                        if (ToolUtils.isProcessStopped(errorMonitor, indicator)) {
-                            handler.destroyProcess()
-                            return
-                        }
-                        if (outputType.toString() == "stdout") {
-                            output.appendStdout(event.text)
-                        } else if (outputType.toString() == "stderr") {
-                            output.appendStderr(event.text)
-                        }
-                    }
-
-                    override fun processTerminated(event: ProcessEvent) {
-                        log.info("Process terminated with exit code: ${event.exitCode}")
-                        log.info("OUTPUT FROM KEX:\n ${output.stdout}")
-//                        log.error("PRINTING from STDERR:\n ${output.stderr}")
-                    }
-                })
-
-                handler.startNotify()
-
-                // Wait for the process to complete with a timeout
-                if (!handler.waitFor(kexProcessTimeout)) {
-                    handler.destroyProcess()
-                    throw IOException("Process timed out and was terminated")
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-                log.error("Error running KEX process", e)
-            }
+            runKex(cmd, errorMonitor, indicator)
 
             log.info("Save generated test suite and test cases into the project workspace")
-            val report = IJReport()
-            val imports = mutableSetOf<String>()
-            var packageStr = ""
 
-            val generatedTestsDir = File(
-                "$resultName/tests/${
-                    classFQN.substringBeforeLast('.').replace('.', '/')
-                }",
-            )
-            if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { // collect all generated tests into a report
-                for ((index, file) in generatedTestsDir.listFiles()!!.withIndex()) {
-                    val testCode = file.readText()
-
-                    if (file.name.contains("Equality") || file.name.contains("Reflection")) {
-                        // collecting all methods
-                        generatedTestsData.otherInfo += "${getHelperClassBody(testCode)}\n"
-                    } else {
-                        // merge @before and @test annotated methods into a single method
-                        report.testCaseList[index] =
-                            TestCase(
-                                index,
-                                file.name.substringBefore('.'),
-                                extractTestMethod(file, index).toString(),
-                                setOf(),
-                            )
-                    }
-                    // extracting just imports out of the test code
-                    // remove imports from helper classes
-                    imports.addAll(
-                        ToolUtils.getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!)
-                            .filterNot {
-                                it.contains("import static org.example.EqualityUtils.*;") ||
-                                    it.contains("import static org.example.ReflectionUtils.*")
-                            },
-                    )
-                    packageStr =
-                        ToolUtils.getPackageFromTestSuiteCode(testCode) // TODO remove repeatedly setting with same value
-                }
-            } else {
-                kexErrorManager.errorProcess(
-                    KexMessagesBundle.get("TestsDontExist"),
-                    project,
-                    errorMonitor,
-                )
-            }
-
-            ToolUtils.transferToIJTestCases(report)
-            ToolUtils.saveData(
-                project,
-                report,
-                packageStr,
-                imports,
-                projectContext.fileUrlAsString!!,
-                generatedTestsData,
-            )
+            preprocessGeneratedTestFiles(resultName, classFQN, generatedTestsData, projectContext, errorMonitor)
         } catch (e: Exception) {
             kexErrorManager.errorProcess(
                 KexMessagesBundle.get("KexErrorCommon").format(e.message),
@@ -253,7 +162,117 @@ class KexProcessManager(
         )
     }
 
-    // TODO  This method could use the parser
+    private fun preprocessGeneratedTestFiles(
+        resultName: String,
+        classFQN: String,
+        generatedTestsData: TestGenerationData,
+        projectContext: ProjectContext,
+        errorMonitor: ErrorMonitor,
+    ) {
+        val report = IJReport()
+        val imports = mutableSetOf<String>()
+        val packageStr = classFQN.substringBeforeLast('.')
+
+        val generatedTestsDir = File(
+            "$resultName/tests/${
+                classFQN.substringBeforeLast('.').replace('.', '/')
+            }",
+        )
+        if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { // collect all generated tests into a report
+            for ((index, file) in generatedTestsDir.listFiles()!!.withIndex()) {
+                val testCode = file.readText()
+
+                if (file.name.contains("Equality") || file.name.contains("Reflection")) {
+                    // collecting all methods
+                    generatedTestsData.otherInfo += "${getHelperClassBody(testCode)}\n"
+                } else {
+                    // merge @before and @test annotated methods into a single method
+                    report.testCaseList[index] =
+                        TestCase(
+                            index,
+                            file.name.substringBefore('.'),
+                            extractTestMethod(file, index).toString(),
+                            setOf(),
+                        )
+                }
+                // extracting just imports out of the test code
+                // remove imports from helper classes
+                imports.addAll(
+                    getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!)
+                        .filterNot {
+                            it.contains("import static org.example.EqualityUtils.*;") ||
+                                it.contains("import static org.example.ReflectionUtils.*;")
+                        },
+                )
+            }
+        } else {
+            kexErrorManager.errorProcess(
+                KexMessagesBundle.get("TestsDontExist"),
+                project,
+                errorMonitor,
+            )
+        }
+
+        ToolUtils.transferToIJTestCases(report)
+        ToolUtils.saveData(
+            project,
+            report,
+            packageStr,
+            imports,
+            projectContext.fileUrlAsString!!,
+            generatedTestsData,
+        )
+    }
+
+    private fun runKex(
+        cmd: MutableList<String>,
+        errorMonitor: ErrorMonitor,
+        indicator: CustomProgressIndicator,
+    ) {
+        try {
+            val kexProcess = GeneralCommandLine(cmd)
+            kexProcess.charset = Charset.forName("UTF-8")
+            kexProcess.workDirectory = File(kexHome)
+            kexProcess.environment["KEX_HOME"] = kexHome
+
+            val handler = OSProcessHandler(kexProcess)
+            val output = ProcessOutput()
+            ProcessTerminatedListener.attach(handler)
+
+            // rerouting stdout and stderr
+            handler.addProcessListener(object : ProcessAdapter() {
+                override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
+                    if (ToolUtils.isProcessStopped(errorMonitor, indicator)) {
+                        handler.destroyProcess()
+                        return
+                    }
+                    if (outputType.toString() == "stdout") {
+                        output.appendStdout(event.text)
+                    } else if (outputType.toString() == "stderr") {
+                        output.appendStderr(event.text)
+                    }
+                }
+
+                override fun processTerminated(event: ProcessEvent) {
+                    log.info("Process terminated with exit code: ${event.exitCode}")
+                    log.info("Output from Kex stdout:\n ${output.stdout}")
+                    log.info("Output from Kex stderr:\n ${output.stderr}")
+                }
+            })
+
+            handler.startNotify()
+
+            // Wait for the process to complete with a timeout
+            if (!handler.waitFor(kexProcessTimeout)) {
+                handler.destroyProcess()
+                throw IOException("Process timed out and was terminated")
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
+            log.error("Error running KEX process", e)
+        }
+    }
+
     private fun getHelperClassBody(testCode: String) =
         (
             StaticJavaParser.parse(testCode).findFirst(ClassOrInterfaceDeclaration::class.java)
@@ -294,6 +313,9 @@ class KexProcessManager(
             kexDir.mkdirs()
         }
 
+        // All jars in runtime deps are also required
+        // There are more files on top of this which I'm not aware of so the kex zip on github just has the whole project
+        // Importantly this list has kaxExecPath which contains a version number. So if the number changes the project will be updated with a download
         val requiredFiles = listOf(
             "$kexHome/kex.ini",
             "$kexHome/kex.policy",
@@ -314,7 +336,7 @@ class KexProcessManager(
                 return false
             }
 
-        // TODO this can fail unexpectedly if a file with the same name as a required directory exists
+        // this can fail unexpectedly if a file with the same name as a required directory exists
         // inside the given kexHome path.
         ZipInputStream(stream).use { zipInputStream ->
             generateSequence { zipInputStream.nextEntry }
