@@ -41,10 +41,10 @@ class JavaPsiMethodWrapper(private val psiMethod: PsiMethod) : PsiMethodWrapper 
         get() = psiMethod.parameterList.parameters.map { it.name }
 
     override val parameterTypes: List<String>
-        get() = psiMethod.parameterList.parameters.map { it.type.presentableText }
+        get() = psiMethod.parameterList.parameters.map { it.type.canonicalText }
 
     override val returnType: String
-        get() = psiMethod.returnType?.presentableText ?: "void"
+        get() = psiMethod.returnType?.canonicalText ?: "void"
 
     val parameterList = psiMethod.parameterList
 

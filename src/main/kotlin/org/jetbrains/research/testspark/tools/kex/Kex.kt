@@ -64,7 +64,8 @@ class Kex(override val name: String = "Kex") : Tool {
             getKexProcessManager(project),
             FragmentToTestData(
                 CodeType.METHOD,
-                "${psiMethod.name}(${psiMethod.parameterTypes.joinToString(",")}):${psiMethod.returnType}".replace("boolean", "bool").replace("String", "java.lang.String"),
+                // remove generics due to type erasure at jvm and the bool is a strange requirement by kex
+                removeGenerics("${psiMethod.name}(${psiMethod.parameterTypes.joinToString(",")}):${psiMethod.returnType}").replace("boolean", "bool"),
             ),
         )
     }
@@ -105,5 +106,23 @@ class Kex(override val name: String = "Kex") : Tool {
         val packageName = "$projectClassPath/${settingsProjectState.buildPath}"
 
         return Pipeline(project, psiHelper, caretOffset, fileUrl, packageName, testGenerationController)
+    }
+
+    /**
+     * Removes the generic type arguments from a string. Any characters between angle brackets (<>) are removed,
+     * along with the angle brackets themselves. The resulting string does not contain any generic type information.
+     *
+     * @receiver The string from which to remove the generic type arguments.
+     * @return The resulting string with generic type arguments removed.
+     */
+    private fun removeGenerics(typeString: String):String {
+        val s = StringBuilder()
+        var stack: Int = 0
+        for (c in typeString) {
+            if (c == '<') ++stack
+            else if (c == '>') --stack
+            else if (stack == 0) s.append(c)
+        }
+        return s.toString()
     }
 }
