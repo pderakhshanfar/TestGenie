@@ -13,7 +13,7 @@ import java.nio.file.Paths
 class KexSettingsArguments(
     private val javaExecPath: String,
     private val module: Module,
-    private val classFQN: String,
+    private val target: String,
     private val resultName: String,
     private val kexSettingsState: KexSettingsState,
     private val kexExecPath: String,
@@ -51,7 +51,7 @@ class KexSettingsArguments(
             "--classpath",
             getBuildOutputDirectory(module)!!.toString(),
             "--target",
-            "\"$classFQN\"",
+            "\"$target\"",
             "--output",
             resultName,
             "--mode",
