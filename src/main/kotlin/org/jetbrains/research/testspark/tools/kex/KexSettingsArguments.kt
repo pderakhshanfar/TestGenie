@@ -56,7 +56,6 @@ class KexSettingsArguments(
             resultName,
             "--mode",
             kexSettingsState.kexMode.toString(),
-            "--option",
         )
     }
 
@@ -66,21 +65,29 @@ class KexSettingsArguments(
      */
     private fun MutableList<String>.setKexIniOptions(): MutableList<String> {
         // Add options provided with help of settings ui
-        this.addAll(
-            listOf(
-                listOf("kex", "minimizeTestSuite", KexDefaultsBundle.get("minimizeTestSuite")),
-                listOf("testGen", "maxTests", kexSettingsState.maxTests.toString()),
-                listOf("concolic", "timeLimit", kexSettingsState.timeLimit.toString()),
-                listOf("symbolic", "timeLimit", kexSettingsState.timeLimit.toString()),
-            )
-                .map { it.joinToString(":") },
+        val optionStrings = mutableListOf(
+            listOf("kex", "minimizeTestSuite", KexDefaultsBundle.get("minimizeTestSuite")),
+            listOf("testGen", "maxTests", kexSettingsState.maxTests.toString()),
+            listOf("concolic", "timeLimit", kexSettingsState.timeLimit.toString()),
+            listOf("symbolic", "timeLimit", kexSettingsState.timeLimit.toString()),
         )
+            .map { it.joinToString(":") }
+            .toMutableList()
 
         // adding explicitly provided user option
+        // break into a list of options if multiple are provided
         if (kexSettingsState.otherOptions.isNotBlank()) {
-            // break into a list of options if multiple are provided
-            this.addAll(kexSettingsState.otherOptions.splitToSequence(' '))
+            optionStrings.addAll(kexSettingsState.otherOptions.splitToSequence(' '))
         }
+
+        // add --option before every option
+        val separator = "--option"
+        val interspersed = optionStrings.fold (mutableListOf<String>()) { acc, item ->
+            acc.add(separator)
+            acc.add(item)
+            acc
+        }
+        this.addAll(interspersed)
         return this
     }
 
