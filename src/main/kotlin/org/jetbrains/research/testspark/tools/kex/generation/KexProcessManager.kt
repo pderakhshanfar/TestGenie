@@ -44,8 +44,8 @@ class KexProcessManager(
     private val kexErrorManager: KexErrorManager = KexErrorManager()
     private val log = Logger.getInstance(this::class.java)
 
-    private val kexVersion = KexDefaultsBundle.get("kexVersion")
-    private val kexUrl = "https://github.com/edwin1729/kex/releases/download/$kexVersion/kex-$kexVersion.zip"
+    private val kexVersion = kexSettingsState.kexVersion
+    private val kexUrl = "${KexDefaultsBundle.get("kexUrlBase")}$kexVersion/kex-$kexVersion.zip"
     private var kexHome: String = kexSettingsState.kexHome
 
     init {

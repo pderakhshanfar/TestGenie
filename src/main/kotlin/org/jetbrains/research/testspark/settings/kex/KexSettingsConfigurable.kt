@@ -26,6 +26,7 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
      * Sets the stored state values to the corresponding UI components. This method is called immediately after `createComponent` method.
      */
     override fun reset() {
+        settingsComponent!!.kexVersion = kexSettingsState.kexVersion
         settingsComponent!!.kexPath = kexSettingsState.kexHome
         settingsComponent!!.kexMode = kexSettingsState.kexMode
         settingsComponent!!.option = kexSettingsState.otherOptions
@@ -39,7 +40,8 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
      * @return whether any setting has been modified
      */
     override fun isModified(): Boolean {
-        return settingsComponent!!.kexPath != kexSettingsState.kexHome ||
+        return settingsComponent!!.kexVersion != kexSettingsState.kexVersion ||
+            settingsComponent!!.kexPath != kexSettingsState.kexHome ||
             settingsComponent!!.kexMode != kexSettingsState.kexMode ||
             settingsComponent!!.option != kexSettingsState.otherOptions ||
             settingsComponent!!.maxTests != kexSettingsState.maxTests ||
@@ -50,6 +52,7 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
      * Persists the modified state after a user hit Apply button.
      */
     override fun apply() {
+        kexSettingsState.kexVersion = settingsComponent!!.kexVersion
         kexSettingsState.kexHome = settingsComponent!!.kexPath
         kexSettingsState.kexMode = settingsComponent!!.kexMode
         kexSettingsState.otherOptions = settingsComponent!!.option

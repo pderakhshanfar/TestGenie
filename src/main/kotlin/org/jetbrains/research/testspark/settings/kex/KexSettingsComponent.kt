@@ -23,13 +23,20 @@ class KexSettingsComponent(private val project: Project) : SettingsComponent {
     private val kexSettingsState: KexSettingsState
         get() = project.getService(KexSettingsService::class.java).state
 
+    private var kexVersionTextField = JTextField()
     private var kexPathTextField = JTextField()
     private var kexModeSelector = ComboBox(KexMode.entries.toTypedArray())
-    private var optionTextField = JTextField() // TODO comments for these
+    private var optionTextField = JTextField() // option triples which override options in kex.ini (see Kex readme)
 
     // maximum test cases returned by kex when minimization is enabled (enabled by default)
     private var maxTestsField = JBIntSpinner(UINumericRange(kexSettingsState.maxTests, 1, Integer.MAX_VALUE))
     private var timeLimitField = JBIntSpinner(UINumericRange(kexSettingsState.timeLimit.inWholeSeconds.toInt(), 1, Integer.MAX_VALUE))
+
+    var kexVersion: String
+        get() = kexVersionTextField.text
+        set(x) {
+            kexVersionTextField.text = x
+        }
 
     var kexPath: String
         get() = kexPathTextField.text
@@ -71,11 +78,12 @@ class KexSettingsComponent(private val project: Project) : SettingsComponent {
     override fun createSettingsPanel() {
         panel = FormBuilder.createFormBuilder()
             .addComponent(JXTitledSeparator(KexLabelsBundle.get("kexSettings")))
-            .addLabeledComponent(JBLabel(KexLabelsBundle.get("kexHome")), kexPathTextField, 10, false)
             .addLabeledComponent(JBLabel(KexLabelsBundle.get("kexMode")), kexModeSelector, 10, false)
             .addLabeledComponent(JBLabel(KexLabelsBundle.get("maxTests")), maxTestsField, 10, false)
             .addLabeledComponent(JBLabel(KexLabelsBundle.get("timeLimit")), timeLimitField, 10, false)
             .addLabeledComponent(JBLabel(KexLabelsBundle.get("option")), optionTextField, 10, false)
+            .addLabeledComponent(JBLabel(KexLabelsBundle.get("kexHome")), kexPathTextField, 10, false)
+            .addLabeledComponent(JBLabel(KexLabelsBundle.get("kexVersion")), kexVersionTextField, 10, false)
             .panel
     }
 
