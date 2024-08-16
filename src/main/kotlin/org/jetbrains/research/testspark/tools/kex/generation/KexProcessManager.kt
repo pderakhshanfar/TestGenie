@@ -50,7 +50,6 @@ class KexProcessManager(
     private val projectPath: String,
 ) : ProcessManager {
 
-    private val kexProcessTimeout: Long = 12000000
     private val kexErrorManager: KexErrorManager = KexErrorManager()
     private val log = Logger.getInstance(this::class.java)
 
@@ -140,14 +139,14 @@ class KexProcessManager(
             log.info("Starting Kex with arguments: $cmdString")
 
             // run kex as subprocess
-            runKex(cmd, errorMonitor, indicator)
+            if (!runKex(cmd, errorMonitor, indicator)) return null
 
             log.info("Save generated test suite and test cases into the project workspace")
 
             preprocessGeneratedTestFiles(resultName, classFQN, generatedTestsData, projectContext, errorMonitor)
         } catch (e: Exception) {
             kexErrorManager.errorProcess(
-                KexMessagesBundle.get("KexErrorCommon").format(e.message),
+                KexMessagesBundle.get("kexErrorCommon").format(e.message),
                 project,
                 errorMonitor,
             )
@@ -205,7 +204,7 @@ class KexProcessManager(
             }
         } else {
             kexErrorManager.errorProcess(
-                KexMessagesBundle.get("TestsDontExist"),
+                KexMessagesBundle.get("testsDontExist"),
                 project,
                 errorMonitor,
             )
@@ -222,11 +221,14 @@ class KexProcessManager(
         )
     }
 
+    /**
+     * @return false if the subprocess didn't run successfully
+     */
     private fun runKex(
         cmd: MutableList<String>,
         errorMonitor: ErrorMonitor,
         indicator: CustomProgressIndicator,
-    ) {
+    ): Boolean {
         try {
             val kexProcess = GeneralCommandLine(cmd)
             kexProcess.charset = Charset.forName("UTF-8")
@@ -244,6 +246,7 @@ class KexProcessManager(
                         handler.destroyProcess()
                         return
                     }
+                    kexErrorManager.addLineToKexOutput(event.text)
                     if (outputType.toString() == "stdout") {
                         output.appendStdout(event.text)
                     } else if (outputType.toString() == "stderr") {
@@ -259,15 +262,17 @@ class KexProcessManager(
             })
 
             handler.startNotify()
-
-            // Wait for the process to complete with a timeout
-            if (!handler.waitFor(kexProcessTimeout)) {
-                handler.destroyProcess()
-                throw IOException("Process timed out and was terminated")
-            }
+            handler.waitFor() // no timeout provided since kex has builtin timeouts which we pass as args
+            return kexErrorManager.isProcessCorrect(handler, project, errorMonitor)
         } catch (e: IOException) {
+            kexErrorManager.errorProcess(
+                KexMessagesBundle.get("kexErrorSubprocess").format(e.message),
+                project,
+                errorMonitor,
+            )
             e.printStackTrace()
             log.error("Error running KEX process", e)
+            return false
         }
     }
 

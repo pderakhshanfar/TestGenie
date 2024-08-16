@@ -242,6 +242,8 @@
                            displayType="BALLOON"/>
         <notificationGroup id="LLM Execution Error"
                            displayType="BALLOON"/>
+        <notificationGroup id="Kex Execution Error"
+                           displayType="BALLOON"/>
         <notificationGroup id="Generation Error"
                            displayType="BALLOON"/>
         <notificationGroup id="Test case copied"
