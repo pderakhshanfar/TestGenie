@@ -11,9 +11,9 @@ import org.jetbrains.research.testspark.langwrappers.PsiHelper
 import org.jetbrains.research.testspark.langwrappers.PsiMethodWrapper
 import org.jetbrains.research.testspark.services.PluginSettingsService
 import org.jetbrains.research.testspark.tools.Pipeline
+import org.jetbrains.research.testspark.tools.ToolUtils
 import org.jetbrains.research.testspark.tools.kex.generation.KexProcessManager
 import org.jetbrains.research.testspark.tools.template.Tool
-import java.io.File
 
 class Kex(override val name: String = "Kex") : Tool {
     private val log = Logger.getInstance(this::class.java)
@@ -27,7 +27,7 @@ class Kex(override val name: String = "Kex") : Tool {
     private fun getKexProcessManager(project: Project): KexProcessManager {
         val projectClassPath: String = ProjectRootManager.getInstance(project).contentRoots.first().path
         val settingsProjectState = project.service<PluginSettingsService>().state
-        val buildPath = "$projectClassPath${File.separatorChar}${settingsProjectState.buildPath}"
+        val buildPath = ToolUtils.osJoin(projectClassPath, settingsProjectState.buildPath)
         return KexProcessManager(project, buildPath)
     }
 

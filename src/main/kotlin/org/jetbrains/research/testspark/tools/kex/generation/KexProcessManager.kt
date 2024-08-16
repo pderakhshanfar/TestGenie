@@ -174,7 +174,8 @@ class KexProcessManager(
         val packageStr = classFQN.substringBeforeLast('.')
 
         val generatedTestsDir = File(
-            "$resultName/tests/${classFQN.substringBeforeLast('.').replace('.', '/')}")
+            "$resultName/tests/${classFQN.substringBeforeLast('.').replace('.', '/')}",
+        )
         if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { // collect all generated tests into a report
             for ((index, file) in generatedTestsDir.listFiles()!!.withIndex()) {
                 val testCode = file.readText()

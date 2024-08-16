@@ -2,6 +2,8 @@ package org.jetbrains.research.testspark.settings.kex
 
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.data.kex.KexMode
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * This class is the actual data class that stores the values of the Kex Settings entries.
@@ -11,7 +13,7 @@ data class KexSettingsState(
     var kexHome: String = DefaultKexSettingsState.kexHome,
     var kexMode: KexMode = DefaultKexSettingsState.kexMode,
     var otherOptions: String = DefaultKexSettingsState.otherOptions,
-    var timeLimit: Int = DefaultKexSettingsState.timeLimit, // seconds
+    var timeLimit: Duration = DefaultKexSettingsState.timeLimit,
     var maxTests: Int = DefaultKexSettingsState.maxTests,
 ) {
 
@@ -23,7 +25,7 @@ data class KexSettingsState(
         val kexHome: String = KexDefaultsBundle.get("kexHome")
         val kexMode: KexMode = KexMode.Concolic
         val otherOptions: String = KexDefaultsBundle.get("otherOptions")
-        val timeLimit: Int = KexDefaultsBundle.get("timeLimit").toInt() // seconds
+        val timeLimit: Duration = KexDefaultsBundle.get("timeLimit").toInt().seconds
         val maxTests = KexDefaultsBundle.get("maxTests").toInt()
     }
 }

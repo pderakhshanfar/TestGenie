@@ -4,6 +4,7 @@ import com.intellij.openapi.project.Project
 import org.jetbrains.research.testspark.services.KexSettingsService
 import org.jetbrains.research.testspark.settings.template.SettingsConfigurable
 import javax.swing.JComponent
+import kotlin.time.Duration.Companion.seconds
 
 class KexSettingsConfigurable(private val project: Project) : SettingsConfigurable {
     private val kexSettingsState: KexSettingsState
@@ -29,7 +30,7 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
         settingsComponent!!.kexMode = kexSettingsState.kexMode
         settingsComponent!!.option = kexSettingsState.otherOptions
         settingsComponent!!.maxTests = kexSettingsState.maxTests
-        settingsComponent!!.timeLimit = kexSettingsState.timeLimit
+        settingsComponent!!.timeLimit = kexSettingsState.timeLimit.inWholeSeconds.toInt()
     }
 
     /**
@@ -42,7 +43,7 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
             settingsComponent!!.kexMode != kexSettingsState.kexMode ||
             settingsComponent!!.option != kexSettingsState.otherOptions ||
             settingsComponent!!.maxTests != kexSettingsState.maxTests ||
-            settingsComponent!!.timeLimit != kexSettingsState.timeLimit
+            settingsComponent!!.timeLimit != kexSettingsState.timeLimit.inWholeSeconds.toInt()
     }
 
     /**
@@ -53,7 +54,7 @@ class KexSettingsConfigurable(private val project: Project) : SettingsConfigurab
         kexSettingsState.kexMode = settingsComponent!!.kexMode
         kexSettingsState.otherOptions = settingsComponent!!.option
         kexSettingsState.maxTests = settingsComponent!!.maxTests
-        kexSettingsState.timeLimit = settingsComponent!!.timeLimit
+        kexSettingsState.timeLimit = settingsComponent!!.timeLimit.seconds
     }
 
     /**

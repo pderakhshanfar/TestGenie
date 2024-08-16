@@ -29,7 +29,7 @@ class KexSettingsComponent(private val project: Project) : SettingsComponent {
 
     // maximum test cases returned by kex when minimization is enabled (enabled by default)
     private var maxTestsField = JBIntSpinner(UINumericRange(kexSettingsState.maxTests, 1, Integer.MAX_VALUE))
-    private var timeLimitField = JBIntSpinner(UINumericRange(kexSettingsState.timeLimit, 1, Integer.MAX_VALUE))
+    private var timeLimitField = JBIntSpinner(UINumericRange(kexSettingsState.timeLimit.inWholeSeconds.toInt(), 1, Integer.MAX_VALUE))
 
     var kexPath: String
         get() = kexPathTextField.text

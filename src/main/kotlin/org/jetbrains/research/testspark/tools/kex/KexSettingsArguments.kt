@@ -68,8 +68,8 @@ class KexSettingsArguments(
         val optionStrings = mutableListOf(
             listOf("kex", "minimizeTestSuite", KexDefaultsBundle.get("minimizeTestSuite")),
             listOf("testGen", "maxTests", kexSettingsState.maxTests.toString()),
-            listOf("concolic", "timeLimit", kexSettingsState.timeLimit.toString()),
-            listOf("symbolic", "timeLimit", kexSettingsState.timeLimit.toString()),
+            listOf("concolic", "timeLimit", "${kexSettingsState.timeLimit.inWholeSeconds}"),
+            listOf("symbolic", "timeLimit", "${kexSettingsState.timeLimit.inWholeSeconds}"),
         )
             .map { it.joinToString(":") }
             .toMutableList()
@@ -82,7 +82,7 @@ class KexSettingsArguments(
 
         // add --option before every option
         val separator = "--option"
-        val interspersed = optionStrings.fold (mutableListOf<String>()) { acc, item ->
+        val interspersed = optionStrings.fold(mutableListOf<String>()) { acc, item ->
             acc.add(separator)
             acc.add(item)
             acc
