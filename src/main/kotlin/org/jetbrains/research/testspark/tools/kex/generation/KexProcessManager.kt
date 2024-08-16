@@ -219,17 +219,8 @@ class KexProcessManager(
             kexDir.mkdirs()
         }
 
-        // All jars in runtime deps are also required
-        // There are more files on top of this which I'm not aware of so the kex zip on github just has the whole project
-        // Importantly this list has kaxExecPath which contains a version number. So if the number changes the project will be updated with a download
-        val requiredFiles = listOf(
-            "$kexHome/kex.ini",
-            "$kexHome/kex.policy",
-            "$kexHome/runtime-deps/modules.info",
-            kexExecPath,
-        )
-        if (requiredFiles.map { File(it).exists() }.all { it }) {
-            log.info("Specified kex jar found, skipping update")
+        if (File(kexExecPath).exists()) {
+            log.info("Specified version found, skipping update")
             return true
         }
 
