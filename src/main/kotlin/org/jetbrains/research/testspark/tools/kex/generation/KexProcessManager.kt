@@ -1,11 +1,5 @@
 package org.jetbrains.research.testspark.tools.kex.generation
 
-import com.github.javaparser.StaticJavaParser
-import com.github.javaparser.ast.NodeList
-import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
-import com.github.javaparser.ast.body.FieldDeclaration
-import com.github.javaparser.ast.body.MethodDeclaration
-import com.github.javaparser.ast.stmt.BlockStmt
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.ProcessAdapter
@@ -19,14 +13,11 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.roots.ProjectRootManager
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.bundles.kex.KexMessagesBundle
-import org.jetbrains.research.testspark.core.data.TestCase
 import org.jetbrains.research.testspark.core.data.TestGenerationData
-import org.jetbrains.research.testspark.core.generation.llm.getImportsCodeFromTestSuiteCode
 import org.jetbrains.research.testspark.core.monitor.ErrorMonitor
 import org.jetbrains.research.testspark.core.progress.CustomProgressIndicator
 import org.jetbrains.research.testspark.data.CodeType
 import org.jetbrains.research.testspark.data.FragmentToTestData
-import org.jetbrains.research.testspark.data.IJReport
 import org.jetbrains.research.testspark.data.ProjectContext
 import org.jetbrains.research.testspark.data.UIContext
 import org.jetbrains.research.testspark.services.KexSettingsService
@@ -143,7 +134,7 @@ class KexProcessManager(
 
             log.info("Save generated test suite and test cases into the project workspace")
 
-            preprocessGeneratedTestFiles(resultName, classFQN, generatedTestsData, projectContext, errorMonitor)
+            GeneratedTestsProcessor(project, errorMonitor, kexErrorManager).process(resultName, classFQN, generatedTestsData, projectContext)
         } catch (e: Exception) {
             kexErrorManager.errorProcess(
                 KexMessagesBundle.get("kexErrorCommon").format(e.message),
@@ -158,66 +149,6 @@ class KexProcessManager(
             generatedTestsData,
             StandardRequestManagerFactory(project).getRequestManager(project),
             errorMonitor,
-        )
-    }
-
-    private fun preprocessGeneratedTestFiles(
-        resultName: String,
-        classFQN: String,
-        generatedTestsData: TestGenerationData,
-        projectContext: ProjectContext,
-        errorMonitor: ErrorMonitor,
-    ) {
-        val report = IJReport()
-        val imports = mutableSetOf<String>()
-        val packageStr = classFQN.substringBeforeLast('.')
-
-        val generatedTestsDir = File(
-            "$resultName/tests/${classFQN.substringBeforeLast('.').replace('.', '/')}",
-        )
-        if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { // collect all generated tests into a report
-            for ((index, file) in generatedTestsDir.listFiles()!!.withIndex()) {
-                val testCode = file.readText()
-
-                if (file.name.contains("Equality") || file.name.contains("Reflection")) {
-                    // collecting all methods
-                    generatedTestsData.otherInfo += "${getHelperClassBody(testCode)}\n"
-                } else {
-                    // merge @before and @test annotated methods into a single method
-                    report.testCaseList[index] =
-                        TestCase(
-                            index,
-                            file.name.substringBefore('.'),
-                            extractTestMethod(file, index).toString(),
-                            setOf(),
-                        )
-                }
-                // extracting just imports out of the test code
-                // remove imports from helper classes
-                imports.addAll(
-                    getImportsCodeFromTestSuiteCode(testCode, projectContext.classFQN!!)
-                        .filterNot {
-                            it.contains("import static org.example.EqualityUtils.*;") ||
-                                it.contains("import static org.example.ReflectionUtils.*;")
-                        },
-                )
-            }
-        } else {
-            kexErrorManager.errorProcess(
-                KexMessagesBundle.get("testsDontExist"),
-                project,
-                errorMonitor,
-            )
-        }
-
-        ToolUtils.transferToIJTestCases(report)
-        ToolUtils.saveData(
-            project,
-            report,
-            packageStr,
-            imports,
-            projectContext.fileUrlAsString!!,
-            generatedTestsData,
         )
     }
 
@@ -274,34 +205,6 @@ class KexProcessManager(
             log.error("Error running KEX process", e)
             return false
         }
-    }
-
-    private fun getHelperClassBody(testCode: String) =
-        (
-            StaticJavaParser.parse(testCode).findFirst(ClassOrInterfaceDeclaration::class.java)
-                .get()
-            ).toString().substringAfter('{').substringBeforeLast('}')
-
-    private fun extractTestMethod(file: File?, id: Int): MethodDeclaration {
-        val compilationUnit = StaticJavaParser.parse(file)
-        // Kex generates a Class for each test case. Each class has exactly two methods:
-        // at index 1 an @Before annotated method
-        // at index 2 an @Test annotated method
-        // merge the two into a single method
-        val methods = compilationUnit.findAll(MethodDeclaration::class.java)
-        val methodStmts = methods.map { it.body.map { it.statements }.orElse(NodeList()) }
-
-        val fields = NodeList(
-            compilationUnit.findAll(FieldDeclaration::class.java)
-                .filterNot { it.isPublic } // drops the timeout
-                .map { it.toString() }
-                .map { StaticJavaParser.parseStatement(it) },
-        )
-        fields.addAll(methodStmts[1])
-        fields.addAll(methodStmts[2])
-        methods[2].setBody(BlockStmt(fields))
-        methods[2].setName("test$id")
-        return methods[2]
     }
 
     /**
