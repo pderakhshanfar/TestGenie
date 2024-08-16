@@ -12,6 +12,7 @@ import java.nio.file.Paths
 
 class KexSettingsArguments(
     private val javaExecPath: String,
+    private val javaVersion: Int,
     private val module: Module,
     private val target: String,
     private val resultName: String,
@@ -22,7 +23,7 @@ class KexSettingsArguments(
     fun buildCommand(): MutableList<String> {
         return mutableListOf<String>(javaExecPath)
             .setJvmProperties()
-            .setAddOpensArgs()
+            .setAddOpensArgs(javaVersion)
             .setKexParams()
             .setKexIniOptions()
     }
@@ -36,8 +37,10 @@ class KexSettingsArguments(
         )
     }
 
-    private fun MutableList<String>.setAddOpensArgs(): MutableList<String> {
-        File("$kexHome/runtime-deps/modules.info").readLines().forEach { this.addAll("--add-opens", it) }
+    private fun MutableList<String>.setAddOpensArgs(javaVersion: Int): MutableList<String> {
+        if (javaVersion > 8) {
+            File("$kexHome/runtime-deps/modules.info").readLines().forEach { this.addAll("--add-opens", it) }
+        }
         return this
     }
 

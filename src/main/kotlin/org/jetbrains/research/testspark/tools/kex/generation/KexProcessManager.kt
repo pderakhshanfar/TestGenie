@@ -118,6 +118,7 @@ class KexProcessManager(
 
             val cmd = KexSettingsArguments(
                 javaExecPath,
+                version,
                 projectContext.cutModule!!,
                 target,
                 resultName,
