@@ -6,6 +6,7 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VfsUtil
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.settings.kex.KexSettingsState
+import org.jetbrains.research.testspark.tools.kex.generation.GeneratedTestsProcessor
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -73,6 +74,7 @@ class KexSettingsArguments(
             listOf("testGen", "maxTests", kexSettingsState.maxTests.toString()),
             listOf("concolic", "timeLimit", "${kexSettingsState.timeLimit.inWholeSeconds}"),
             listOf("symbolic", "timeLimit", "${kexSettingsState.timeLimit.inWholeSeconds}"),
+            listOf("testGen", "defaultPackageName", GeneratedTestsProcessor.DEFAULT_PACKAGE_NAME),
         )
             .map { it.joinToString(":") }
             .toMutableList()

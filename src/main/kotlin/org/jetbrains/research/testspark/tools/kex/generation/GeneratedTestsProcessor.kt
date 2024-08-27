@@ -27,6 +27,9 @@ class GeneratedTestsProcessor(
     companion object {
         const val EQUALITY_UTILS = "EqualityUtils"
         const val REFLECTION_UTILS = "ReflectionUtils"
+
+        // can be any arbitrary name. used when no package is provided
+        const val DEFAULT_PACKAGE_NAME = "example"
     }
 
     fun process(
@@ -37,10 +40,10 @@ class GeneratedTestsProcessor(
     ) {
         val report = IJReport()
         val imports = mutableSetOf<String>()
-        val packageStr = classFQN.substringBeforeLast('.')
+        val packageStr = classFQN.substringBeforeLast('.', missingDelimiterValue = DEFAULT_PACKAGE_NAME)
 
         val generatedTestsDir = File(
-            ToolUtils.osJoin(resultName, "tests", classFQN.substringBeforeLast('.').replace('.', '/')),
+            ToolUtils.osJoin(resultName, "tests", packageStr.replace('.', '/')),
         )
         if (generatedTestsDir.exists() && generatedTestsDir.isDirectory) { // collect all generated tests into a report
             for ((index, file) in generatedTestsDir.listFiles()!!.withIndex()) {
