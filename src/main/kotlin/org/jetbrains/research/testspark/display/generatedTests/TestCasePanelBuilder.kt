@@ -261,11 +261,9 @@ class TestCasePanelBuilder(
         panel.add(languageTextFieldScrollPane)
         panel.add(Box.createRigidArea(Dimension(0, 5)))
 
-        addLanguageTextFieldListener(languageTextField)
         PsiManager.getInstance(project).addPsiTreeChangeListener(object : PsiTreeChangeAdapter() {
             override fun childAdded(event: PsiTreeChangeEvent) {
-                val file = event.file ?: return
-                foldHelperCode()
+                languageTextField.editor?.foldHelperCode()
             }
         })
         return panel
@@ -388,17 +386,16 @@ class TestCasePanelBuilder(
      * Folds helper methods, fields when displaying to user,
      * so they can focus on the important @Test annotated methods
      */
-    private fun foldHelperCode() {
-        val editor = languageTextField.editor!!
-        val document = editor.document
-        val project = editor.project ?: return
+    private fun Editor.foldHelperCode() {
+        val document = this.document
+        val project = this.project ?: return
 
         // Get the PSI file associated with the document
         val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document) ?: return
 
         // Run the folding operation
-        editor.foldingModel.runBatchFoldingOperation {
-            val foldingModel: FoldingModel = editor.foldingModel
+        this.foldingModel.runBatchFoldingOperation {
+            val foldingModel: FoldingModel = this.foldingModel
 
             var range = document.textLength to 0
             // Find start and end offsets for folding
