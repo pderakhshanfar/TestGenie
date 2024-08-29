@@ -33,17 +33,21 @@ import org.jetbrains.research.testspark.tools.llm.Llm
 import org.jetbrains.research.testspark.tools.template.Tool
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
 import java.awt.Toolkit
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import javax.swing.Box
+import javax.swing.BoxLayout
 import javax.swing.ButtonGroup
 import javax.swing.JButton
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JRadioButton
+import javax.swing.SwingConstants
 
 /**
  * Represents an action to be performed in the TestSpark plugin.
@@ -113,6 +117,7 @@ class TestSparkAction : AnAction() {
         private val evoSuiteButton = JRadioButton("<html><b>${EvoSuite().name}</b></html>")
         private val kexButton = JRadioButton("<html><b>${Kex().name}</b></html>")
         private val testGeneratorButtonGroup = ButtonGroup()
+        private val kexForLineCodeTypeErrMsg = JLabel() // The error displayed when if kex and line code type are chosen
 
         private val psiHelper: PsiHelper
             get() {
@@ -240,7 +245,13 @@ class TestSparkAction : AnAction() {
                 .panel
 
             val nextButtonPanel = JPanel()
+            nextButtonPanel.layout = BoxLayout(nextButtonPanel, BoxLayout.Y_AXIS)
             nextButton.isEnabled = false
+            nextButton.alignmentX = Component.CENTER_ALIGNMENT
+            kexForLineCodeTypeErrMsg.alignmentX = Component.CENTER_ALIGNMENT
+            kexForLineCodeTypeErrMsg.horizontalAlignment = SwingConstants.CENTER
+            nextButtonPanel.add(kexForLineCodeTypeErrMsg)
+            nextButtonPanel.add(Box.createVerticalStrut(10)) // Add some space between label and button
             nextButtonPanel.add(nextButton)
 
             val cardPanel = JPanel(BorderLayout())
@@ -411,7 +422,17 @@ class TestSparkAction : AnAction() {
         private fun updateNextButton() {
             val isTestGeneratorButtonGroupSelected = llmButton.isSelected || evoSuiteButton.isSelected || kexButton.isSelected
             val isCodeTypeButtonGroupSelected = codeTypeButtons.any { it.second.isSelected }
-            nextButton.isEnabled = isTestGeneratorButtonGroupSelected && isCodeTypeButtonGroupSelected
+            val kexForCodeLineType =
+                kexButton.isSelected && codeTypeButtons.any { (codeType, button) -> codeType == CodeType.LINE && button.isSelected }
+            if (kexForCodeLineType) {
+                kexForLineCodeTypeErrMsg.text =
+                    "<html><b><font color='orange'>* Kex cannot generate tests for a single line. Please change your selection</font></b></html>"
+            } else {
+                kexForLineCodeTypeErrMsg.text = ""
+            }
+
+            nextButton.isEnabled =
+                isTestGeneratorButtonGroupSelected && isCodeTypeButtonGroupSelected && !kexForCodeLineType
 
             if ((llmButton.isSelected && !llmSettingsState.llmSetupCheckBoxSelected && !llmSettingsState.provideTestSamplesCheckBoxSelected) ||
                 (evoSuiteButton.isSelected && !evoSuiteSettingsState.evosuiteSetupCheckBoxSelected) ||

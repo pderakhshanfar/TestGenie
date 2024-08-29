@@ -94,14 +94,7 @@ class KexProcessManager(
             val target: String = when (codeType.type!!) {
                 CodeType.CLASS -> classFQN
                 CodeType.METHOD -> "$classFQN::${codeType.objectDescription}"
-                CodeType.LINE -> run {
-                    kexErrorManager.errorProcess(
-                        KexMessagesBundle.get("unsupportedCodeTypeLine"),
-                        project,
-                        errorMonitor,
-                    )
-                    return null
-                }
+                CodeType.LINE -> return null // This is impossible since this combination is disallowed in UI (see TestSparkAction.kt)
             }
 
             // Disallow old java versions
