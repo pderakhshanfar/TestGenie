@@ -5,12 +5,14 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import org.jetbrains.research.testspark.actions.controllers.TestGenerationController
-import org.jetbrains.research.testspark.data.CodeType
+import org.jetbrains.research.testspark.core.test.data.CodeType
 import org.jetbrains.research.testspark.data.FragmentToTestData
+import org.jetbrains.research.testspark.display.TestSparkDisplayManager
 import org.jetbrains.research.testspark.langwrappers.PsiHelper
 import org.jetbrains.research.testspark.langwrappers.PsiMethodWrapper
 import org.jetbrains.research.testspark.services.PluginSettingsService
 import org.jetbrains.research.testspark.tools.Pipeline
+import org.jetbrains.research.testspark.tools.TestsExecutionResultManager
 import org.jetbrains.research.testspark.tools.ToolUtils
 import org.jetbrains.research.testspark.tools.kex.generation.KexProcessManager
 import org.jetbrains.research.testspark.tools.template.Tool
@@ -40,9 +42,26 @@ class Kex(override val name: String = "Kex") : Tool {
      * @param fileUrl The URL of the file being tested.
      * @param testSamplesCode The code to be used as test samples.
      */
-    override fun generateTestsForClass(project: Project, psiHelper: PsiHelper, caretOffset: Int, fileUrl: String?, testSamplesCode: String, testGenerationController: TestGenerationController) {
+    override fun generateTestsForClass(
+        project: Project,
+        psiHelper: PsiHelper,
+        caretOffset: Int,
+        fileUrl: String?,
+        testSamplesCode: String,
+        testGenerationController: TestGenerationController,
+        testSparkDisplayManager: TestSparkDisplayManager,
+        testsExecutionResultManager: TestsExecutionResultManager
+    ) {
         log.info("Starting tests generation for class by Kex")
-        createPipeline(project, psiHelper, caretOffset, fileUrl, testGenerationController).runTestGeneration(
+        createPipeline(
+            project,
+            psiHelper,
+            caretOffset,
+            fileUrl,
+            testGenerationController,
+            testSparkDisplayManager,
+            testsExecutionResultManager
+        ).runTestGeneration(
             getKexProcessManager(project),
             FragmentToTestData(
                 CodeType.CLASS,
@@ -57,15 +76,28 @@ class Kex(override val name: String = "Kex") : Tool {
         fileUrl: String?,
         testSamplesCode: String,
         testGenerationController: TestGenerationController,
+        testSparkDisplayManager: TestSparkDisplayManager,
+        testsExecutionResultManager: TestsExecutionResultManager
     ) {
         log.info("Starting tests generation for method by Kex")
         val psiMethod: PsiMethodWrapper = psiHelper.getSurroundingMethod(caretOffset)!!
-        createPipeline(project, psiHelper, caretOffset, fileUrl, testGenerationController).runTestGeneration(
+        createPipeline(
+            project,
+            psiHelper,
+            caretOffset,
+            fileUrl,
+            testGenerationController,
+            testSparkDisplayManager,
+            testsExecutionResultManager
+        ).runTestGeneration(
             getKexProcessManager(project),
             FragmentToTestData(
                 CodeType.METHOD,
                 // remove generics due to type erasure at jvm and the bool is a strange requirement by kex
-                removeGenerics("${psiMethod.name}(${psiMethod.parameterTypes.joinToString(",")}):${psiMethod.returnType}").replace("boolean", "bool"),
+                removeGenerics("${psiMethod.name}(${psiMethod.parameterTypes.joinToString(",")}):${psiMethod.returnType}").replace(
+                    "boolean",
+                    "bool"
+                ),
             ),
         )
     }
@@ -77,16 +109,9 @@ class Kex(override val name: String = "Kex") : Tool {
         fileUrl: String?,
         testSamplesCode: String,
         testGenerationController: TestGenerationController,
+        testSparkDisplayManager: TestSparkDisplayManager,
+        testsExecutionResultManager: TestsExecutionResultManager
     ) {
-        log.info("Starting tests generation for line by EvoSuite")
-        val selectedLine: Int = psiHelper.getSurroundingLine(caretOffset)!!
-        createPipeline(project, psiHelper, caretOffset, fileUrl, testGenerationController).runTestGeneration(
-            getKexProcessManager(project),
-            FragmentToTestData(
-                CodeType.LINE,
-                selectedLine,
-            ),
-        )
     }
 
     /**
@@ -99,13 +124,31 @@ class Kex(override val name: String = "Kex") : Tool {
      * @param fileUrl The URL of the file associated with the pipeline. Can be null.
      * @return The created pipeline object.
      */
-    private fun createPipeline(project: Project, psiHelper: PsiHelper, caretOffset: Int, fileUrl: String?, testGenerationController: TestGenerationController): Pipeline {
+
+    private fun createPipeline(
+        project: Project,
+        psiHelper: PsiHelper,
+        caretOffset: Int,
+        fileUrl: String?,
+        testGenerationController: TestGenerationController,
+        testSparkDisplayManager: TestSparkDisplayManager,
+        testsExecutionResultManager: TestsExecutionResultManager,
+    ): Pipeline {
         val projectClassPath: String = ProjectRootManager.getInstance(project).contentRoots.first().path
 
         val settingsProjectState = project.service<PluginSettingsService>().state
         val packageName = "$projectClassPath/${settingsProjectState.buildPath}"
 
-        return Pipeline(project, psiHelper, caretOffset, fileUrl, packageName, testGenerationController)
+        return Pipeline(
+            project,
+            psiHelper,
+            caretOffset,
+            fileUrl,
+            packageName,
+            testGenerationController,
+            testSparkDisplayManager,
+            testsExecutionResultManager
+        )
     }
 
     /**

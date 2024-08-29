@@ -16,12 +16,13 @@ import org.jetbrains.research.testspark.bundles.kex.KexMessagesBundle
 import org.jetbrains.research.testspark.core.data.TestGenerationData
 import org.jetbrains.research.testspark.core.monitor.ErrorMonitor
 import org.jetbrains.research.testspark.core.progress.CustomProgressIndicator
-import org.jetbrains.research.testspark.data.CodeType
+import org.jetbrains.research.testspark.core.test.data.CodeType
 import org.jetbrains.research.testspark.data.FragmentToTestData
 import org.jetbrains.research.testspark.data.ProjectContext
 import org.jetbrains.research.testspark.data.UIContext
 import org.jetbrains.research.testspark.services.KexSettingsService
 import org.jetbrains.research.testspark.settings.kex.KexSettingsState
+import org.jetbrains.research.testspark.tools.TestsExecutionResultManager
 import org.jetbrains.research.testspark.tools.ToolUtils
 import org.jetbrains.research.testspark.tools.kex.KexSettingsArguments
 import org.jetbrains.research.testspark.tools.kex.error.KexErrorManager
@@ -79,6 +80,7 @@ class KexProcessManager(
         projectContext: ProjectContext,
         generatedTestsData: TestGenerationData,
         errorMonitor: ErrorMonitor,
+        testsExecutionResultManager: TestsExecutionResultManager
     ): UIContext? {
         try {
             if (ToolUtils.isProcessStopped(errorMonitor, indicator)) return null
@@ -135,7 +137,12 @@ class KexProcessManager(
 
             log.info("Save generated test suite and test cases into the project workspace")
 
-            GeneratedTestsProcessor(project, errorMonitor, kexErrorManager).process(resultName, classFQN, generatedTestsData, projectContext)
+            GeneratedTestsProcessor(project, errorMonitor, kexErrorManager, testsExecutionResultManager).process(
+                resultName,
+                classFQN,
+                generatedTestsData,
+                projectContext
+            )
         } catch (e: Exception) {
             kexErrorManager.errorProcess(
                 KexMessagesBundle.get("kexErrorCommon").format(e.message),
