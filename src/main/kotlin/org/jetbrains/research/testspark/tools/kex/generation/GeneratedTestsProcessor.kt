@@ -88,7 +88,7 @@ class GeneratedTestsProcessor(
             imports,
             projectContext.fileUrlAsString!!,
             generatedTestsData,
-            testsExecutionResultManager
+            testsExecutionResultManager,
         )
     }
 

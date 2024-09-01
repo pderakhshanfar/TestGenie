@@ -244,9 +244,9 @@ class DescriptionTab(private val project: Project) {
      */
     private fun getKexDescriptionText(width: Int): String {
         return "<html><body style='width: ${(0.65 * width).toInt()} px;'><font face=Monochrome>" +
-                "<strong>Symbolic Execution-based test generation</strong><br><br>" +
-                "Uses <a href=https://github.com/vorpal-research/kex>Kex</a>. You can generate tests with this tool locally.<br>" +
-                "However, it only supports projects implemented by Java versions 8 and upwards.</font></body></html>"
+            "<strong>Symbolic Execution-based test generation</strong><br><br>" +
+            "Uses <a href=https://github.com/vorpal-research/kex>Kex</a>. You can generate tests with this tool locally.<br>" +
+            "However, it only supports projects implemented by Java versions 8 and upwards.</font></body></html>"
     }
 
     /**

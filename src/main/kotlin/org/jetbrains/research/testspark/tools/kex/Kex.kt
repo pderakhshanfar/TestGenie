@@ -50,7 +50,7 @@ class Kex(override val name: String = "Kex") : Tool {
         testSamplesCode: String,
         testGenerationController: TestGenerationController,
         testSparkDisplayManager: TestSparkDisplayManager,
-        testsExecutionResultManager: TestsExecutionResultManager
+        testsExecutionResultManager: TestsExecutionResultManager,
     ) {
         log.info("Starting tests generation for class by Kex")
         createPipeline(
@@ -60,7 +60,7 @@ class Kex(override val name: String = "Kex") : Tool {
             fileUrl,
             testGenerationController,
             testSparkDisplayManager,
-            testsExecutionResultManager
+            testsExecutionResultManager,
         ).runTestGeneration(
             getKexProcessManager(project),
             FragmentToTestData(
@@ -77,7 +77,7 @@ class Kex(override val name: String = "Kex") : Tool {
         testSamplesCode: String,
         testGenerationController: TestGenerationController,
         testSparkDisplayManager: TestSparkDisplayManager,
-        testsExecutionResultManager: TestsExecutionResultManager
+        testsExecutionResultManager: TestsExecutionResultManager,
     ) {
         log.info("Starting tests generation for method by Kex")
         val psiMethod: PsiMethodWrapper = psiHelper.getSurroundingMethod(caretOffset)!!
@@ -88,7 +88,7 @@ class Kex(override val name: String = "Kex") : Tool {
             fileUrl,
             testGenerationController,
             testSparkDisplayManager,
-            testsExecutionResultManager
+            testsExecutionResultManager,
         ).runTestGeneration(
             getKexProcessManager(project),
             FragmentToTestData(
@@ -96,7 +96,7 @@ class Kex(override val name: String = "Kex") : Tool {
                 // remove generics due to type erasure at jvm and the bool is a strange requirement by kex
                 removeGenerics("${psiMethod.name}(${psiMethod.parameterTypes.joinToString(",")}):${psiMethod.returnType}").replace(
                     "boolean",
-                    "bool"
+                    "bool",
                 ),
             ),
         )
@@ -110,7 +110,7 @@ class Kex(override val name: String = "Kex") : Tool {
         testSamplesCode: String,
         testGenerationController: TestGenerationController,
         testSparkDisplayManager: TestSparkDisplayManager,
-        testsExecutionResultManager: TestsExecutionResultManager
+        testsExecutionResultManager: TestsExecutionResultManager,
     ) {
     }
 
@@ -147,7 +147,7 @@ class Kex(override val name: String = "Kex") : Tool {
             packageName,
             testGenerationController,
             testSparkDisplayManager,
-            testsExecutionResultManager
+            testsExecutionResultManager,
         )
     }
 
