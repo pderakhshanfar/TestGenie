@@ -55,12 +55,14 @@ class GeneratedTestsProcessor(
                     // collecting all methods
                     generatedTestsData.otherInfo += "${getHelperClassBody(testCode)}\n"
                 } else {
+                    // Example.java -> example. example() is the test method name and testcase name expected by TestSpark
+                    val testCaseName = file.name.substringBefore('.').replaceFirstChar { it.lowercaseChar() }
                     // merge @before and @test annotated methods into a single method
-                    val testMethod = extractTestMethod(file, index) ?: continue
+                    val testMethod = extractTestMethod(file, testCaseName) ?: continue
                     report.testCaseList[index] =
                         TestCase(
                             index,
-                            file.name.substringBefore('.'),
+                            testCaseName,
                             testMethod.toString(),
                             setOf(),
                         )
@@ -101,7 +103,7 @@ class GeneratedTestsProcessor(
     /**
      * Merge the fields, @Before, @Test into a single @Test annotated method
      */
-    private fun extractTestMethod(file: File, id: Int): MethodDeclaration? {
+    private fun extractTestMethod(file: File, testCaseName: String): MethodDeclaration? {
         val compilationUnit = StaticJavaParser.parse(file)
         val methods = compilationUnit.findAll(MethodDeclaration::class.java)
         val beforeAnnMethod = methods.getMethodWithAnnotation("@Before", file.name) ?: return null
@@ -120,7 +122,7 @@ class GeneratedTestsProcessor(
         collatedMethodBody.addAll(beforeAnnMethod.statements())
         collatedMethodBody.addAll(testAnnMethod.statements())
         testAnnMethod.setBody(BlockStmt(collatedMethodBody))
-        testAnnMethod.setName("test$id")
+        testAnnMethod.setName(testCaseName)
         return testAnnMethod
     }
 
