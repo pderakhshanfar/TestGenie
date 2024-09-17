@@ -262,6 +262,8 @@ class TestCasePanelBuilder(
         panel.add(languageTextFieldScrollPane)
         panel.add(Box.createRigidArea(Dimension(0, 5)))
 
+        addLanguageTextFieldListener(languageTextField)
+
         PsiManager.getInstance(project).addPsiTreeChangeListener(object : PsiTreeChangeAdapter() {
             override fun childAdded(event: PsiTreeChangeEvent) {
                 languageTextField.editor?.foldHelperCode()
