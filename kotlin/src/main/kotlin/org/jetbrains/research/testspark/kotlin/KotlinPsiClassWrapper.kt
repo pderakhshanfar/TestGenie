@@ -20,6 +20,9 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.allConstructors
+import org.jetbrains.kotlin.psi.allConstructors
+import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.DescriptorToSourceUtils
 import org.jetbrains.research.testspark.core.data.ClassType
 import org.jetbrains.research.testspark.core.utils.kotlinImportPattern
 import org.jetbrains.research.testspark.core.utils.kotlinPackagePattern
