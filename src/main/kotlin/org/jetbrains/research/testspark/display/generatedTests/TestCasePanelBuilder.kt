@@ -82,6 +82,8 @@ import javax.swing.SwingUtilities
 import javax.swing.border.Border
 import javax.swing.border.MatteBorder
 import kotlin.collections.HashMap
+import org.jetbrains.research.testspark.core.data.JUnitVersion
+import org.jetbrains.research.testspark.tools.GenerationTool
 
 class TestCasePanelBuilder(
     private val project: Project,
