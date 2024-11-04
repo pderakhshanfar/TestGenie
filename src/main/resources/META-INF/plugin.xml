@@ -210,6 +210,8 @@
                 serviceImplementation="org.jetbrains.research.testspark.services.PluginSettingsService"/>
         <applicationService
                 serviceImplementation="org.jetbrains.research.testspark.services.EvoSuiteSettingsService"/>
+        <applicationService
+                serviceImplementation="org.jetbrains.research.testspark.services.KexSettingsService"/>
 
         <!-- Configurables -->
         <projectConfigurable
