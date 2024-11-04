@@ -25,7 +25,7 @@ data class KexSettingsState(
         val kexHome: String = KexDefaultsBundle.get("kexHome")
         val kexMode: KexMode = KexMode.Concolic
         val otherOptions: String = KexDefaultsBundle.get("otherOptions")
-        val timeLimit: Duration = KexDefaultsBundle.get("timeLimit").toInt().seconds
-        val maxTests = KexDefaultsBundle.get("maxTests").toInt()
+        val timeLimit: Duration = KexDefaultsBundle.get("timeLimit").toIntOrNull()!!.seconds
+        val maxTests = KexDefaultsBundle.get("maxTests").toIntOrNull()!!
     }
 }
