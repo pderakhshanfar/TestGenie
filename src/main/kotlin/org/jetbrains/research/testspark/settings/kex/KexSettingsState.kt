@@ -13,7 +13,7 @@ data class KexSettingsState(
     var kexHome: String = DefaultKexSettingsState.kexHome,
     var kexMode: KexMode = DefaultKexSettingsState.kexMode,
     var otherOptions: String = DefaultKexSettingsState.otherOptions,
-    var timeLimit: Duration = DefaultKexSettingsState.timeLimit,
+    var timeLimit: Duration = DefaultKexSettingsState.timeLimit.seconds,
     var maxTests: Int = DefaultKexSettingsState.maxTests,
 ) {
 
@@ -25,7 +25,7 @@ data class KexSettingsState(
         val kexHome: String = KexDefaultsBundle.get("kexHome")
         val kexMode: KexMode = KexMode.Concolic
         val otherOptions: String = KexDefaultsBundle.get("otherOptions")
-        val timeLimit: Duration = KexDefaultsBundle.get("timeLimit").toIntOrNull()!!.seconds
-        val maxTests = KexDefaultsBundle.get("maxTests").toIntOrNull()!!
+        val timeLimit: Int = KexDefaultsBundle.get("timeLimit").toInt()
+        val maxTests = KexDefaultsBundle.get("maxTests").toInt()
     }
 }
