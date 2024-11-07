@@ -637,8 +637,8 @@ class TestCasePanelBuilder(
         indicator.setText("Executing ${testCase.testName}")
 
         val fileName = TestAnalyzerFactory.create(language).getFileNameFromTestCaseCode(testCase.testCode)
-        val junitVersion =
-            if (generationTool.toolId == "EvoSuite") JUnitVersion.JUnit4 else llmSettingsState.junitVersion
+        // For LLM JUnit version is taken from settings, while for Kex and EvoSuite only JUnit4 is allowed
+        val junitVersion = if (generationTool.toolId == "LLM") llmSettingsState.junitVersion else JUnitVersion.JUnit4
 
         val testCompiler = TestCompilerFactory.create(
             project,
