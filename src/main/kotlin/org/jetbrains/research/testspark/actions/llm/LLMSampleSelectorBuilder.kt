@@ -1,5 +1,6 @@
 package org.jetbrains.research.testspark.actions.llm
 
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileType
@@ -7,6 +8,7 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
@@ -59,7 +61,7 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
     init {
         addListeners()
 
-        collectTestSamples()
+        // collectTestSamples()
     }
 
     override fun getTitlePanel(): JPanel {
@@ -142,6 +144,7 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
         }
 
         addButton.addActionListener {
+            collectTestSamples()
             val testSamplePanelBuilder =
                 TestSamplePanelBuilder(project, middlePanel, testNames.toMutableList(), initialTestCodes, language)
             testSamplePanelFactories.add(testSamplePanelBuilder)
@@ -189,7 +192,9 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
     }
 
     private fun collectTestSamples() {
-        collectTestSamplesForCurrentFile()
+        val currentDocument = FileEditorManager.getInstance(project).selectedTextEditor?.document
+        val currentFile = currentDocument?.let { FileDocumentManager.getInstance().getFile(it) }
+        collectTestSamplesForCurrentFile(currentFile)
 
         if (testNames.size == 1) {
             // Only the default test name is there, thus we did not find any tests related to the
@@ -198,9 +203,7 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
         }
     }
 
-    private fun collectTestSamplesForCurrentFile() {
-        val currentDocument = FileEditorManager.getInstance(project).selectedTextEditor?.document
-        val currentFile = currentDocument?.let { FileDocumentManager.getInstance().getFile(it) }
+    fun collectTestSamplesForCurrentFile(currentFile: VirtualFile?) {
         val javaFileType: FileType = FileTypeManager.getInstance().getFileTypeByExtension("java")
         val projectScope = ProjectAndLibrariesScope(project)
         if (currentFile!!.fileType === javaFileType) {
@@ -251,7 +254,7 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
      *
      * @return A list of strings, representing the names of the test samples.
      */
-    private fun collectTestSamples(project: Project) {
+    fun collectTestSamples(project: Project) {
         val projectFileIndex: ProjectFileIndex = ProjectRootManager.getInstance(project).fileIndex
         val javaFileType: FileType = FileTypeManager.getInstance().getFileTypeByExtension("java")
 
