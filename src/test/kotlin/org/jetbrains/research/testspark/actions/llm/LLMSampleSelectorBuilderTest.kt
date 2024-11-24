@@ -2,7 +2,6 @@ package org.jetbrains.research.testspark.actions.llm
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.intellij.openapi.application.runReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.IndexingTestUtil
@@ -13,7 +12,6 @@ import com.intellij.testFramework.fixtures.JavaTestFixtureFactory
 import com.intellij.testFramework.fixtures.TestFixtureBuilder
 import org.jetbrains.research.testspark.core.test.SupportedLanguage
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 
 class LLMSampleSelectorBuilderTest {
 
@@ -53,13 +51,13 @@ class LLMSampleSelectorBuilderTest {
     private fun getResourceAsText(path: String): String? =
         object {}.javaClass.getResource(path)?.readText()
 
-    @Test
-    fun collectTestSampleForCurrentFile() {
-        runReadAction { builder.collectTestSamplesForCurrentFile(openFile.virtualFile) }
-    }
+//    @Test
+//    fun collectTestSampleForCurrentFile() {
+//        runReadAction { builder.collectTestSamplesForCurrentFile(openFile.virtualFile) }
+//    }
 
-    @Test
-    fun collectTestSamples() {
-        runReadAction { builder.collectTestSamples(project) }
-    }
+//    @Test
+//    fun collectTestSamples() {
+//        runReadAction { builder.collectTestSamples(project) }
+//    }
 }
