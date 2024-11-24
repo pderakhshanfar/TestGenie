@@ -195,7 +195,7 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
  * A selector for samples for the LLM.
  */
 class LLMSampleSelector {
-    private val defaultTestName = "<html>provide manually</html"
+    private val defaultTestName = "<html>provide manually</html>"
     private val defaultTestCode = "// provide test method code here"
     private val testNames = mutableSetOf(defaultTestName)
     private val initialTestCodes = mutableListOf(createTestSampleClass("", defaultTestCode))
@@ -340,7 +340,7 @@ class LLMSampleSelector {
      * @param psiJavaFile The PSI Java file object
      * @return The PSI class object.
      */
-    private fun retrievePsiClass(psiJavaFile: PsiJavaFile): PsiClass {
+    fun retrievePsiClass(psiJavaFile: PsiJavaFile): PsiClass {
         return psiJavaFile.classes[
             psiJavaFile.classes.stream().map { it.name }.toArray()
                 .indexOf(psiJavaFile.name.removeSuffix(".java")),
@@ -354,7 +354,7 @@ class LLMSampleSelector {
      * @param psiClass The PSI class object.
      * @return A string of import statements.
      */
-    private fun retrieveImportStatements(psiJavaFile: PsiJavaFile, psiClass: PsiClass): String {
+    fun retrieveImportStatements(psiJavaFile: PsiJavaFile, psiClass: PsiClass): String {
         var imports = psiJavaFile.importList?.allImportStatements?.map { it.text }?.toList()
             ?.joinToString("\n") ?: ""
         if (psiClass.qualifiedName != null && psiClass.qualifiedName!!.contains(".")) {
@@ -393,12 +393,12 @@ class LLMSampleSelector {
      * @param methodCode The code of the method.
      * @return A class wrapping the given method.
      */
-    private fun createTestSampleClass(imports: String, methodCode: String): String {
+    fun createTestSampleClass(imports: String, methodCode: String): String {
         var normalizedImports = imports
         if (normalizedImports.isNotBlank()) normalizedImports += "\n\n"
         return normalizedImports +
             "public class TestSample {\n" +
-            "   $methodCode\n" +
+            "    $methodCode\n" +
             "}"
     }
 
@@ -409,6 +409,6 @@ class LLMSampleSelector {
      * @param method The method object.
      * @return A fully-qualified method name.
      */
-    private fun createMethodName(psiClass: PsiClass, method: PsiMethod): String =
+    fun createMethodName(psiClass: PsiClass, method: PsiMethod): String =
         "<html>${psiClass.qualifiedName}#${method.name}</html>"
 }
