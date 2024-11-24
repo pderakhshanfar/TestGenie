@@ -1,6 +1,5 @@
 package org.jetbrains.research.testspark.actions.llm
 
-import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileType
@@ -60,8 +59,6 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
 
     init {
         addListeners()
-
-        // collectTestSamples()
     }
 
     override fun getTitlePanel(): JPanel {
@@ -210,12 +207,14 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
             val psiJavaFile = (PsiManager.getInstance(project).findFile(currentFile!!) as PsiJavaFile)
             val psiClass = psiJavaFile.classes[
                 psiJavaFile.classes.stream().map { it.name }.toArray()
-                    .indexOf(psiJavaFile.name.removeSuffix(".java"))
+                    .indexOf(psiJavaFile.name.removeSuffix(".java")),
             ]
             psiClass.methods.forEach { method ->
                 ReferencesSearch.search(method, projectScope).forEach { reference ->
                     val enclosingMethod = PsiTreeUtil.getParentOfType(
-                        reference.element, PsiMethod::class.java)
+                        reference.element,
+                        PsiMethod::class.java,
+                    )
                     if (enclosingMethod != null) {
                         val enclosingClass = enclosingMethod.containingClass
                         val enclosingFile = (enclosingMethod.containingFile as PsiJavaFile)
@@ -239,8 +238,9 @@ class LLMSampleSelectorBuilder(private val project: Project, private val languag
     private fun processCandidateMethod(psiMethod: PsiMethod, imports: String, psiClass: PsiClass) {
         val annotations = psiMethod.annotations
         annotations.forEach { annotation ->
-            if (annotation.qualifiedName == "org.junit.jupiter.api.Test"
-                    || annotation.qualifiedName == "org.junit.Test") {
+            if (annotation.qualifiedName == "org.junit.jupiter.api.Test" ||
+                annotation.qualifiedName == "org.junit.Test"
+            ) {
                 val code: String = createTestSampleClass(imports, psiMethod.text)
                 if (testNames.add(createMethodName(psiClass, psiMethod))) {
                     initialTestCodes.add(code)
