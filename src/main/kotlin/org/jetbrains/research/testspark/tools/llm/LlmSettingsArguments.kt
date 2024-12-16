@@ -58,6 +58,7 @@ class LlmSettingsArguments(private val project: Project) {
         llmSettingsState.openAIName -> llmSettingsState.openAIToken
         llmSettingsState.grazieName -> llmSettingsState.grazieToken
         llmSettingsState.huggingFaceName -> llmSettingsState.huggingFaceToken
+        llmSettingsState.geminiName -> llmSettingsState.geminiToken
         else -> ""
     }
 
@@ -70,6 +71,7 @@ class LlmSettingsArguments(private val project: Project) {
         llmSettingsState.openAIName -> llmSettingsState.openAIModel
         llmSettingsState.grazieName -> llmSettingsState.grazieModel
         llmSettingsState.huggingFaceName -> llmSettingsState.huggingFaceModel
+        llmSettingsState.geminiName -> llmSettingsState.geminiModel
         else -> ""
     }
 }

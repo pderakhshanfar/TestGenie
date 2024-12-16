@@ -22,6 +22,7 @@ import org.jetbrains.research.testspark.tools.llm.error.LLMErrorManager
 import org.jetbrains.research.testspark.tools.llm.generation.LLMPlatform
 import org.jetbrains.research.testspark.tools.llm.generation.TestBodyPrinterFactory
 import org.jetbrains.research.testspark.tools.llm.generation.TestSuiteParserFactory
+import org.jetbrains.research.testspark.tools.llm.generation.gemini.GeminiPlatform
 import org.jetbrains.research.testspark.tools.llm.generation.grazie.GrazieInfo
 import org.jetbrains.research.testspark.tools.llm.generation.grazie.GraziePlatform
 import org.jetbrains.research.testspark.tools.llm.generation.hf.HuggingFacePlatform
@@ -74,6 +75,9 @@ object LLMHelper {
             if (platformSelector.selectedItem!!.toString() == settingsState.huggingFaceName) {
                 models = getHuggingFaceModels()
             }
+            if (platformSelector.selectedItem!!.toString() == settingsState.geminiName) {
+                models = getGeminiModels(llmUserTokenField.text)
+            }
             modelSelector.model = DefaultComboBoxModel(models)
             for (index in llmPlatforms.indices) {
                 if (llmPlatforms[index].name == settingsState.openAIName &&
@@ -92,6 +96,12 @@ object LLMHelper {
                     llmPlatforms[index].name == platformSelector.selectedItem!!.toString()
                 ) {
                     modelSelector.selectedItem = settingsState.huggingFaceModel
+                    llmPlatforms[index].model = modelSelector.selectedItem!!.toString()
+                }
+                if (llmPlatforms[index].name == settingsState.geminiName &&
+                    llmPlatforms[index].name == platformSelector.selectedItem!!.toString()
+                ) {
+                    modelSelector.selectedItem = settingsState.geminiModel
                     llmPlatforms[index].model = modelSelector.selectedItem!!.toString()
                 }
             }
@@ -130,6 +140,12 @@ object LLMHelper {
             ) {
                 llmUserTokenField.text = settingsState.huggingFaceToken
                 llmPlatforms[index].token = settingsState.huggingFaceToken
+            }
+            if (llmPlatforms[index].name == settingsState.geminiName &&
+                llmPlatforms[index].name == platformSelector.selectedItem!!.toString()
+            ) {
+                llmUserTokenField.text = settingsState.geminiToken
+                llmPlatforms[index].token = settingsState.geminiToken
             }
         }
     }
@@ -219,7 +235,7 @@ object LLMHelper {
      * @return The list of LLMPlatforms.
      */
     fun getLLLMPlatforms(): List<LLMPlatform> {
-        return listOf(OpenAIPlatform(), GraziePlatform(), HuggingFacePlatform())
+        return listOf(OpenAIPlatform(), GraziePlatform(), HuggingFacePlatform(), GeminiPlatform())
     }
 
     /**
@@ -341,6 +357,48 @@ object LLMHelper {
         if (models.isNotEmpty()) {
             return models.sortedWith(gptComparator).toTypedArray().filter { !it.contains("vision") }
                 .toTypedArray()
+        }
+
+        return arrayOf("")
+    }
+
+    /**
+     * Retrieves a list of available models from the Google AI API.
+     *
+     * Note that this will only return models that support content generation because we need this for the
+     * test-generation queries.
+     *
+     * @param providedToken The authentication token provided by Google AI.
+     * @return An array of model IDs. If an error occurs during the request, an array with an empty string is returned.
+     */
+    fun getGeminiModels(providedToken: String): Array<String> {
+        val url = "https://generativelanguage.googleapis.com/v1beta/models?key=$providedToken"
+
+        val httpRequest = HttpRequests.request(url)
+        val models = mutableListOf<String>()
+
+        try {
+            httpRequest.connect { request ->
+                if ((request.connection as HttpURLConnection).responseCode == HttpURLConnection.HTTP_OK) {
+                    val jsonObject = JsonParser.parseString(request.readString()).asJsonObject
+                    val dataArray = jsonObject.getAsJsonArray("models")
+                    for (dataObject in dataArray) {
+                        val id = dataObject.asJsonObject.getAsJsonPrimitive("name").asString
+                        val methods = dataObject.asJsonObject
+                            .getAsJsonArray("supportedGenerationMethods")
+                            .map { method -> method.asString }
+                        if (methods.contains("generateContent")) {
+                            models.add(id.removePrefix("models/"))
+                        }
+                    }
+                }
+            }
+        } catch (e: HttpRequests.HttpStatusException) {
+            return arrayOf("")
+        }
+
+        if (models.isNotEmpty()) {
+            return models.toTypedArray()
         }
 
         return arrayOf("")

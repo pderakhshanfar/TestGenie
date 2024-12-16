@@ -46,6 +46,10 @@ class LLMSettingsConfigurable(private val project: Project) : SettingsConfigurab
                 settingsComponent!!.llmPlatforms[index].token = llmSettingsState.huggingFaceToken
                 settingsComponent!!.llmPlatforms[index].model = llmSettingsState.huggingFaceModel
             }
+            if (settingsComponent!!.llmPlatforms[index].name == llmSettingsState.geminiName) {
+                settingsComponent!!.llmPlatforms[index].token = llmSettingsState.geminiToken
+                settingsComponent!!.llmPlatforms[index].model = llmSettingsState.geminiModel
+            }
         }
         settingsComponent!!.currentLLMPlatformName = llmSettingsState.currentLLMPlatformName
         settingsComponent!!.maxLLMRequest = llmSettingsState.maxLLMRequest
@@ -88,6 +92,10 @@ class LLMSettingsConfigurable(private val project: Project) : SettingsConfigurab
             if (settingsComponent!!.llmPlatforms[index].name == llmSettingsState.huggingFaceName) {
                 modified = modified or (settingsComponent!!.llmPlatforms[index].token != llmSettingsState.huggingFaceToken)
                 modified = modified or (settingsComponent!!.llmPlatforms[index].model != llmSettingsState.huggingFaceModel)
+            }
+            if (settingsComponent!!.llmPlatforms[index].name == llmSettingsState.geminiName) {
+                modified = modified or (settingsComponent!!.llmPlatforms[index].token != llmSettingsState.geminiToken)
+                modified = modified or (settingsComponent!!.llmPlatforms[index].model != llmSettingsState.geminiModel)
             }
         }
         modified = modified or (settingsComponent!!.currentLLMPlatformName != llmSettingsState.currentLLMPlatformName)
@@ -149,6 +157,10 @@ class LLMSettingsConfigurable(private val project: Project) : SettingsConfigurab
             if (settingsComponent!!.llmPlatforms[index].name == llmSettingsState.huggingFaceName) {
                 llmSettingsState.huggingFaceToken = settingsComponent!!.llmPlatforms[index].token
                 llmSettingsState.huggingFaceModel = settingsComponent!!.llmPlatforms[index].model
+            }
+            if (settingsComponent!!.llmPlatforms[index].name == llmSettingsState.geminiName) {
+                llmSettingsState.geminiToken = settingsComponent!!.llmPlatforms[index].token
+                llmSettingsState.geminiModel = settingsComponent!!.llmPlatforms[index].model
             }
         }
         llmSettingsState.currentLLMPlatformName = settingsComponent!!.currentLLMPlatformName
