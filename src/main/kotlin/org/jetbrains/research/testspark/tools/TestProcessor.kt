@@ -239,10 +239,8 @@ class TestProcessor(
         frames.removeFirst()
 
         frames.forEach { frame ->
-            // pattern for isolated java class name
-            val pattern = "(?<![a-zA-Z])${projectContext.classFQN!!}(?![a-zA-Z])".toRegex()
             // classFQN will be null for the top level function
-            if (projectContext.classFQN != null && pattern.containsMatchIn(frame)) {
+            if (projectContext.classFQN != null && frame.contains(projectContext.classFQN!!)) {
                 val coveredLineNumber = frame.split(":")[1].replace(")", "").toIntOrNull()
                 if (coveredLineNumber != null) {
                     result.add(coveredLineNumber)
