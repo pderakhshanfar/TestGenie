@@ -22,6 +22,13 @@ object ToolUtils {
     val pathSep = File.pathSeparatorChar
 
     /**
+     * Concatenate strings with OS specific path seperators
+     */
+    fun osJoin(vararg strings: String): String {
+        return strings.joinToString(sep.toString())
+    }
+
+    /**
      * Saves the data related to test generation in the specified project's workspace.
      *
      * @param project The project in which the test generation data will be saved.
