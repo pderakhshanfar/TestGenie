@@ -16,7 +16,6 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.EditorTextField
-import com.intellij.psi.*
 import com.intellij.psi.JavaRecursiveElementVisitor
 import com.intellij.psi.PsiClassInitializer
 import com.intellij.psi.PsiDocumentManager
@@ -27,7 +26,6 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiTreeChangeAdapter
 import com.intellij.psi.PsiTreeChangeEvent
-import com.intellij.ui.EditorTextField
 import com.intellij.ui.JBColor
 import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBScrollPane
@@ -82,8 +80,6 @@ import javax.swing.SwingUtilities
 import javax.swing.border.Border
 import javax.swing.border.MatteBorder
 import kotlin.collections.HashMap
-import org.jetbrains.research.testspark.core.data.JUnitVersion
-import org.jetbrains.research.testspark.tools.GenerationTool
 
 class TestCasePanelBuilder(
     private val project: Project,
