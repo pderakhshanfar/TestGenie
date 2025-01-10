@@ -10,7 +10,6 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.roots.ProjectRootManager
 import org.jetbrains.research.testspark.bundles.kex.KexDefaultsBundle
 import org.jetbrains.research.testspark.bundles.kex.KexMessagesBundle
 import org.jetbrains.research.testspark.core.data.TestGenerationData
@@ -28,7 +27,6 @@ import org.jetbrains.research.testspark.tools.kex.KexSettingsArguments
 import org.jetbrains.research.testspark.tools.kex.error.KexErrorManager
 import org.jetbrains.research.testspark.tools.llm.generation.StandardRequestManagerFactory
 import org.jetbrains.research.testspark.tools.template.generation.ProcessManager
-import java.io.File
 import java.io.File
 import java.io.IOException
 import java.net.URL
