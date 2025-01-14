@@ -148,7 +148,7 @@ class Kex(override val name: String = "Kex") : Tool {
             testGenerationController,
             testSparkDisplayManager,
             testsExecutionResultManager,
-            name
+            name,
         )
     }
 
