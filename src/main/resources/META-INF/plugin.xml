@@ -210,6 +210,8 @@
                 serviceImplementation="org.jetbrains.research.testspark.services.PluginSettingsService"/>
         <applicationService
                 serviceImplementation="org.jetbrains.research.testspark.services.EvoSuiteSettingsService"/>
+        <applicationService
+                serviceImplementation="org.jetbrains.research.testspark.services.KexSettingsService"/>
 
         <!-- Configurables -->
         <projectConfigurable
@@ -227,6 +229,11 @@
                 instance="org.jetbrains.research.testspark.settings.evosuite.EvoSuiteSettingsConfigurable"
                 id="EvoSuiteSettings"
                 displayName="EvoSuite"/>
+        <projectConfigurable
+                parentId="PluginSettings"
+                instance="org.jetbrains.research.testspark.settings.kex.KexSettingsConfigurable"
+                id="KexSettings"
+                displayName="Kex"/>
 
         <!-- Notifications -->
         <notificationGroup id="Execution Error"
@@ -236,6 +243,8 @@
         <notificationGroup id="Build Execution Error"
                            displayType="BALLOON"/>
         <notificationGroup id="LLM Execution Error"
+                           displayType="BALLOON"/>
+        <notificationGroup id="Kex Execution Error"
                            displayType="BALLOON"/>
         <notificationGroup id="Generation Error"
                            displayType="BALLOON"/>

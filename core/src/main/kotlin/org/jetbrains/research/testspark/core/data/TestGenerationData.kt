@@ -16,6 +16,7 @@ data class TestGenerationData(
     var importsCode: MutableSet<String> = mutableSetOf(),
     var packageName: String = "",
     var runWith: String = "",
+    // Modifications to this code in the tool-window editor are forgotten when apply to test suite
     var otherInfo: String = "",
 
     // changing parameters with a large prompt

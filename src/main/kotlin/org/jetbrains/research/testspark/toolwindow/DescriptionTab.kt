@@ -7,6 +7,7 @@ import com.intellij.util.ui.FormBuilder
 import org.jetbrains.research.testspark.bundles.plugin.PluginLabelsBundle
 import org.jetbrains.research.testspark.display.TestSparkIcons
 import org.jetbrains.research.testspark.settings.evosuite.EvoSuiteSettingsConfigurable
+import org.jetbrains.research.testspark.settings.kex.KexSettingsConfigurable
 import org.jetbrains.research.testspark.settings.llm.LLMSettingsConfigurable
 import org.jetbrains.research.testspark.settings.plugin.PluginSettingsConfigurable
 import java.awt.Desktop
@@ -58,6 +59,16 @@ class DescriptionTab(private val project: Project) {
         }
     }
 
+    private val testSparkKexDescription = JTextPane().apply {
+        isEditable = false
+        contentType = "text/html"
+        addHyperlinkListener { evt ->
+            if (HyperlinkEvent.EventType.ACTIVATED == evt.eventType) {
+                Desktop.getDesktop().browse(evt.url.toURI())
+            }
+        }
+    }
+
     private val testSparkDisclaimerDescription = JTextPane().apply {
         isEditable = false
         contentType = "text/html"
@@ -73,6 +84,9 @@ class DescriptionTab(private val project: Project) {
 
     // Link to EvoSuite settings
     private val evoSuiteSettingsButton = JButton(PluginLabelsBundle.get("evoSuiteSettingsLink"), TestSparkIcons.settings)
+
+    // Link to Kex settings
+    private val kexSettingsButton = JButton(PluginLabelsBundle.get("kexSettingsLink"), TestSparkIcons.settings)
 
     // Link to open settings
     private val settingsButton = JButton(PluginLabelsBundle.get("settingsLink"), TestSparkIcons.settings)
@@ -107,6 +121,13 @@ class DescriptionTab(private val project: Project) {
             ShowSettingsUtil.getInstance().showSettingsDialog(project, EvoSuiteSettingsConfigurable::class.java)
         }
 
+        // Kex settings button setup
+        kexSettingsButton.isOpaque = false
+        kexSettingsButton.isContentAreaFilled = false
+        kexSettingsButton.addActionListener {
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, KexSettingsConfigurable::class.java)
+        }
+
         // Settings button setup
         settingsButton.isOpaque = false
         settingsButton.isContentAreaFilled = false
@@ -135,6 +156,10 @@ class DescriptionTab(private val project: Project) {
         testSparkEvoSuiteDescription.isOpaque = false
         testSparkEvoSuiteDescription.text = getEvoSuiteDescriptionText(getContent().preferredSize.width)
 
+        // testSpark Kex description setup
+        testSparkKexDescription.isOpaque = false
+        testSparkKexDescription.text = getKexDescriptionText(getContent().preferredSize.width)
+
         // testSpark disclaimer description setup
         testSparkDisclaimerDescription.isOpaque = false
         testSparkDisclaimerDescription.text = getDisclaimerText(getContent().preferredSize.width)
@@ -153,6 +178,8 @@ class DescriptionTab(private val project: Project) {
         .addComponent(llmSettingsButton, 10)
         .addComponent(testSparkEvoSuiteDescription, 20)
         .addComponent(evoSuiteSettingsButton, 10)
+        .addComponent(testSparkKexDescription, 20)
+        .addComponent(kexSettingsButton, 10)
         .addComponent(testSparkDisclaimerDescription, 20)
         .addComponent(settingsButton, 10)
         .addComponent(documentationButton, 10)
@@ -207,6 +234,19 @@ class DescriptionTab(private val project: Project) {
             "<strong>Search-based test generation</strong><br><br>" +
             "Uses <a href=https://www.evosuite.org>EvoSuite</a>. You can generate tests with this tool locally.<br>" +
             "However, it only supports projects implemented by Java versions 8 to 11.</font></body></html>"
+    }
+
+    /**
+     * Returns the descriptive text for Kex test generation.
+     *
+     * @param width The width of the text body in pixels.
+     * @return The formatted HTML string containing the description of test generation through symbolic execution using Kex.
+     */
+    private fun getKexDescriptionText(width: Int): String {
+        return "<html><body style='width: ${(0.65 * width).toInt()} px;'><font face=Monochrome>" +
+            "<strong>Symbolic Execution-based test generation</strong><br><br>" +
+            "Uses <a href=https://github.com/vorpal-research/kex>Kex</a>. You can generate tests with this tool locally.<br>" +
+            "However, it only supports projects implemented by Java versions 8 and upwards.</font></body></html>"
     }
 
     /**
