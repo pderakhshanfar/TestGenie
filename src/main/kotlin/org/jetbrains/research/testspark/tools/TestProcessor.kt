@@ -285,8 +285,7 @@ class TestProcessor(
                     }
                     children("sourcefile") {
                         isCorrectSourceFile =
-                            this.attributes.getValue("name") == projectContext.fileUrlAsString!!.split(File.separatorChar)
-                                .last()
+                            this.attributes.getValue("name") == projectContext.fileUrlAsString!!.split(File.separatorChar).last()
                         children("line") {
                             if (isCorrectSourceFile && this.attributes.getValue("mi") == "0") {
                                 setOfLines.add(this.attributes.getValue("nr").toInt())
