@@ -223,9 +223,9 @@ class LLMSampleSelector {
         var normalizedImports = imports
         if (normalizedImports.isNotBlank()) normalizedImports += "\n\n"
         return normalizedImports +
-                "public class TestSample {\n" +
-                "    $methodCode\n" +
-                "}"
+            "public class TestSample {\n" +
+            "    $methodCode\n" +
+            "}"
     }
 
     /**
