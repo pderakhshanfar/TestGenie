@@ -103,7 +103,7 @@ class LLMSampleSelectorTest {
     @Test
     fun `test the class retrieval from a Java file`() {
         val expectedName = "CarTest"
-        val actual = runReadAction { selector.retrievePsiClass(openFile as PsiJavaFile) }
+        val actual = runReadAction { selector.retrievePsiClass(openFile) }
         assertEquals(expectedName, actual.name)
     }
 
@@ -115,7 +115,7 @@ class LLMSampleSelectorTest {
             import dummy.*;
         """.trimIndent()
         val actual = runReadAction {
-            val file = openFile as PsiJavaFile
+            val file = openFile
             selector.retrieveImportStatements(file, classFromFile(file))
         }
         assertEquals(expected, actual)
