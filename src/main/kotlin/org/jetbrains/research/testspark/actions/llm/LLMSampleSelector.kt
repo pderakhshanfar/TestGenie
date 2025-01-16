@@ -22,10 +22,8 @@ import com.intellij.util.containers.stream
  * A selector for samples for the LLM.
  */
 class LLMSampleSelector {
-    private val defaultTestName = "<html>provide manually</html>"
-    private val defaultTestCode = "// provide test method code here"
-    private val testNames = mutableSetOf(defaultTestName)
-    private val initialTestCodes = mutableListOf(createTestSampleClass("", defaultTestCode))
+    private val testNames = mutableSetOf(DEFAULT_TEST_NAME)
+    private val initialTestCodes = mutableListOf(createTestSampleClass("", DEFAULT_TEST_CODE))
     private var testSamplesCode: String = ""
 
     /**
@@ -84,7 +82,8 @@ class LLMSampleSelector {
                     val psiClass = retrievePsiClass(psiJavaFile)
                     val imports = retrieveImportStatements(psiJavaFile, psiClass)
                     psiClass.allMethods.forEach { method -> processCandidateMethod(method, imports, psiClass) }
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
             true
         }
@@ -238,4 +237,9 @@ class LLMSampleSelector {
      */
     fun createMethodName(psiClass: PsiClass, method: PsiMethod): String =
         "<html>${psiClass.qualifiedName}#${method.name}</html>"
+
+    companion object {
+        const val DEFAULT_TEST_NAME = "<html>provide manually</html>"
+        const val DEFAULT_TEST_CODE = "// provide test method code here"
+    }
 }

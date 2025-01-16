@@ -26,6 +26,12 @@ class LLMSampleSelectorTest {
     private lateinit var fixture: CodeInsightTestFixture
     private lateinit var openFile: PsiJavaFile
 
+    private val sampleTestCode = """
+        public class TestSample {
+            ${LLMSampleSelector.DEFAULT_TEST_CODE}
+        }
+    """.trimIndent()
+
     @BeforeEach
     @BeforeTry
     fun setUpSelector() {
@@ -74,19 +80,14 @@ class LLMSampleSelectorTest {
 
     @Test
     fun `test the initial test names`() {
-        val expected = mutableListOf("<html>provide manually</html>")
+        val expected = mutableListOf(LLMSampleSelector.DEFAULT_TEST_NAME)
         val actual = selector.getTestNames()
         assertContentEquals(expected, actual)
     }
 
     @Test
     fun `test the initial test code`() {
-        val initialCode = """
-            public class TestSample {
-                // provide test method code here
-            }
-        """.trimIndent()
-        val expected = mutableListOf(initialCode)
+        val expected = mutableListOf(sampleTestCode)
         val actual = selector.getInitialTestCodes()
         assertContentEquals(expected, actual)
     }
@@ -122,16 +123,10 @@ class LLMSampleSelectorTest {
 
     @Test
     fun `test the create test-sample class`() {
-        val expected = """
-            import org.junit.jupiter.api.Test;
-            
-            public class TestSample {
-                // provide test method code here
-            }
-        """.trimIndent()
+        val expected = "import org.junit.jupiter.api.Test;\n\n$sampleTestCode"
         val actual = selector.createTestSampleClass(
             "import org.junit.jupiter.api.Test;",
-            "// provide test method code here",
+            LLMSampleSelector.DEFAULT_TEST_CODE,
         )
         assertEquals(expected, actual)
     }
