@@ -18,6 +18,9 @@ data class LLMSettingsState(
     var huggingFaceName: String = DefaultLLMSettingsState.huggingFaceName,
     var huggingFaceToken: String = DefaultLLMSettingsState.huggingFaceToken,
     var huggingFaceModel: String = DefaultLLMSettingsState.huggingFaceModel,
+    var geminiName: String = DefaultLLMSettingsState.geminiName,
+    var geminiToken: String = DefaultLLMSettingsState.geminiToken,
+    var geminiModel: String = DefaultLLMSettingsState.geminiModel,
     var currentLLMPlatformName: String = DefaultLLMSettingsState.currentLLMPlatformName,
     var maxLLMRequest: Int = DefaultLLMSettingsState.maxLLMRequest,
     var maxInputParamsDepth: Int = DefaultLLMSettingsState.maxInputParamsDepth,
@@ -51,6 +54,9 @@ data class LLMSettingsState(
         val huggingFaceName: String = LLMDefaultsBundle.get("huggingFaceName")
         val huggingFaceToken: String = LLMDefaultsBundle.get("huggingFaceToken")
         val huggingFaceModel: String = LLMDefaultsBundle.get("huggingFaceModel")
+        val geminiName: String = LLMDefaultsBundle.get("geminiName")
+        val geminiToken: String = LLMDefaultsBundle.get("geminiToken")
+        val geminiModel: String = LLMDefaultsBundle.get("geminiModel")
         var currentLLMPlatformName: String = LLMDefaultsBundle.get("openAIName")
         val maxLLMRequest: Int = LLMDefaultsBundle.get("maxLLMRequest").toInt()
         val maxInputParamsDepth: Int = LLMDefaultsBundle.get("maxInputParamsDepth").toInt()

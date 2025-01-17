@@ -45,7 +45,7 @@ class LLMSettingsComponent(private val project: Project) : SettingsComponent {
 
     // Models
     private var modelSelector = ComboBox(arrayOf(""))
-    private var platformSelector = ComboBox(arrayOf(llmSettingsState.openAIName, llmSettingsState.huggingFaceName))
+    private var platformSelector = ComboBox(arrayOf(llmSettingsState.openAIName, llmSettingsState.huggingFaceName, llmSettingsState.geminiName))
 
     // Default LLM Requests
     private var defaultLLMRequestsSeparator =
