@@ -37,6 +37,15 @@ class KotlinPsiMethodWrapper(val psiFunction: KtFunction) : PsiMethodWrapper {
     override val signature: String
         get() = buildSignature(psiFunction)
 
+    override val parameterNames: List<String>
+        get() = psiFunction.valueParameters.map { it.name ?: "" }
+
+    override val parameterTypes: List<String>
+        get() = psiFunction.valueParameters.map { it.typeReference?.text ?: "Any" }
+
+    override val returnType: String
+        get() = psiFunction.typeReference?.text ?: "Unit"
+
     val parameterList = psiFunction.valueParameterList
 
     val isPrimaryConstructor: Boolean = psiFunction is KtPrimaryConstructor

@@ -6,6 +6,7 @@ package org.jetbrains.research.testspark.tools
 enum class GenerationTool(val toolId: String) {
     EvoSuite("EvoSuite"),
     LLM("LLM"),
+    Kex("Kex"),
     ;
 
     companion object {

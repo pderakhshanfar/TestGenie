@@ -6,6 +6,7 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diff.DiffColors
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.FoldingModel
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.editor.markup.HighlighterLayer
@@ -14,11 +15,22 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.psi.JavaRecursiveElementVisitor
+import com.intellij.psi.PsiClassInitializer
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiField
+import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifierListOwner
+import com.intellij.psi.PsiTreeChangeAdapter
+import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.JBColor
 import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import org.jetbrains.kotlin.psi.psiUtil.endOffset
 import org.jetbrains.research.testspark.bundles.llm.LLMMessagesBundle
 import org.jetbrains.research.testspark.bundles.plugin.PluginLabelsBundle
 import org.jetbrains.research.testspark.bundles.plugin.PluginMessagesBundle
@@ -66,6 +78,7 @@ import javax.swing.ScrollPaneConstants
 import javax.swing.SwingUtilities
 import javax.swing.border.Border
 import javax.swing.border.MatteBorder
+import kotlin.collections.HashMap
 
 class TestCasePanelBuilder(
     private val project: Project,
@@ -249,6 +262,11 @@ class TestCasePanelBuilder(
 
         addLanguageTextFieldListener(languageTextField)
 
+        PsiManager.getInstance(project).addPsiTreeChangeListener(object : PsiTreeChangeAdapter() {
+            override fun childAdded(event: PsiTreeChangeEvent) {
+                languageTextField.editor?.foldHelperCode()
+            }
+        })
         return panel
     }
 
@@ -358,6 +376,67 @@ class TestCasePanelBuilder(
         })
     }
 
+    private fun updateRange(offsets: Pair<Int, Int>, element: PsiElement): Pair<Int, Int> {
+        var (start, end) = offsets
+        start = if (start < element.textRange.startOffset) start else element.textRange.startOffset
+        end = if (end > element.textRange.endOffset) end else element.textRange.endOffset
+        return start to end
+    }
+
+    /**
+     * Folds helper methods, fields when displaying to user,
+     * so they can focus on the important @Test annotated methods
+     */
+    private fun Editor.foldHelperCode() {
+        val document = this.document
+        val project = this.project ?: return
+
+        // Get the PSI file associated with the document
+        val psiFile = PsiDocumentManager.getInstance(project).getPsiFile(document) ?: return
+
+        // Run the folding operation
+        this.foldingModel.runBatchFoldingOperation {
+            val foldingModel: FoldingModel = this.foldingModel
+
+            var range = document.textLength to 0
+            // Find start and end offsets for folding
+            psiFile.accept(object : JavaRecursiveElementVisitor() {
+                override fun visitMethod(element: PsiMethod) {
+                    super.visitMethod(element)
+                    if (hasTestAnnotation(element)) {
+                        val (startOffset, endOffset) = range
+                        // apply accumulating folding range
+                        foldingModel.addFoldRegion(startOffset, endOffset, "...")?.isExpanded = false
+                        // reset folding range after end of test method
+                        range = element.endOffset to element.endOffset
+                    } else {
+                        range = updateRange(range, element)
+                    }
+                }
+
+                override fun visitField(field: PsiField) {
+                    super.visitField(field)
+                    range = updateRange(range, field)
+                }
+
+                // These are example static initializers which can also be hidden from the user
+                override fun visitClassInitializer(initializer: PsiClassInitializer) {
+                    super.visitClassInitializer(initializer)
+                    range = updateRange(range, initializer)
+                }
+            })
+
+            val (startOffset, endOffset) = range
+            val foldRegion = foldingModel.addFoldRegion(startOffset, endOffset, "...")
+
+            foldRegion?.isExpanded = false // Collapsed by default
+        }
+    }
+
+    private fun hasTestAnnotation(element: PsiModifierListOwner): Boolean {
+        return element.modifierList?.annotations?.any { it.qualifiedName?.contains("Test") ?: false } ?: false
+    }
+
     /**
      * Updates the user interface based on the provided code.
      */
@@ -366,7 +445,6 @@ class TestCasePanelBuilder(
 
         val lastRunCode = lastRunCodes[currentRequestNumber - 1]
         languageTextField.editor?.markupModel?.removeAllHighlighters()
-
         resetButton.isEnabled = testCase.testCode != initialCodes[currentRequestNumber - 1]
         resetToLastRunButton.isEnabled = testCase.testCode != lastRunCode
 
@@ -554,8 +632,8 @@ class TestCasePanelBuilder(
         indicator.setText("Executing ${testCase.testName}")
 
         val fileName = TestAnalyzerFactory.create(language).getFileNameFromTestCaseCode(testCase.testCode)
-        val junitVersion =
-            if (generationTool.toolId == "EvoSuite") JUnitVersion.JUnit4 else llmSettingsState.junitVersion
+        // For LLM JUnit version is taken from settings, while for Kex and EvoSuite only JUnit4 is allowed
+        val junitVersion = if (generationTool.toolId == "LLM") llmSettingsState.junitVersion else JUnitVersion.JUnit4
 
         val testCompiler = TestCompilerFactory.create(
             project,
